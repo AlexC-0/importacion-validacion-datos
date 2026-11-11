@@ -14,8 +14,10 @@ Fecha de actualización: 11 de noviembre de 2026.
   (`47278b314f0b12ae523b4941af23d4a87122b7db`), con el contrato aprobado.
 - Sesión 04 publicada por Alex: `b1cb2e2`
   (`b1cb2e2a586ca29aebd8f25bc60e1aa3c14c5e08`).
-- Al iniciar la sesión 05, `main` local y GitHub coincidían en `b1cb2e2` y
-  el directorio de trabajo estaba limpio. Esta entrega queda local para revisión,
+- Sesión 05 publicada por Alex: `59dbc42`
+  (`59dbc4230b9c6826fdb7ebcbe8feb6afbf45d6e1`).
+- Al iniciar la sesión 06, `main` local y GitHub coincidían en `59dbc42`;
+  no había cambios pendientes. Esta entrega queda local para revisión,
   commit y push manuales.
 - Versión del proyecto en `package.json`: `0.1.0`.
 - La API no está desplegada. Publicar código en GitHub no inicia un servicio.
@@ -196,7 +198,7 @@ de nuevo. Las pruebas de límites no equivalen a pruebas de carga en producción
 Alex revisó y publicó la sesión 04 en `b1cb2e2` desde GitHub Desktop.
 La lista anterior describe su entrega local histórica antes de esa publicación.
 
-## Sesión 05 — PostgreSQL y primera persistencia
+## Sesión 05 — PostgreSQL y primera persistencia, publicada
 
 ### Inspección inicial y autorización
 
@@ -244,7 +246,7 @@ El modelo, decisiones y reproducción se documentan en
 [PERSISTENCIA](PERSISTENCIA.md). Se conservan las reglas aprobadas del contrato.
 No hay ORM, nuevas rutas, multipart, autenticación, despliegue ni colas.
 
-### Comprobaciones ejecutadas en la sesión 05
+### Comprobaciones históricas ejecutadas en la sesión 05
 
 | Comprobación | Resultado final |
 | --- | --- |
@@ -268,10 +270,11 @@ inexistente. La protección de datos funcionó en ambos casos.
 Las pruebas no equivalen a pruebas de carga ni validan aún la clasificación
 funcional bajo concurrencia o la pérdida de respuesta después de COMMIT.
 
-### Estado de la entrega
+### Entrega y publicación de la sesión 05
 
-Rama `main`, HEAD `b1cb2e2`, mismo remoto del proyecto.
-Cambios locales sin staging, commit ni push. La sesión 05 no está publicada.
+La entrega partió de `b1cb2e2` y quedó local sin staging, commit ni push por
+parte de Codex. Alex la publicó posteriormente en `59dbc42`, verificado al
+iniciar la sesión 06.
 Código CSV, aplicación Express, arranque HTTP y pruebas previas conservados.
 
 Binarios, ZIP, datos, logs, credenciales, dependencias instaladas y salida dist
@@ -279,17 +282,101 @@ quedan excluidos de Git. No se modifican otros repositorios ni servicios.
 La revisión final del diff, documentación y exclusiones se registra en el
 informe de entrega. No hay bloqueos de entorno pendientes.
 
-## Pendiente y próximo paso
+## Sesión 06 — Coordinación de importaciones, conflictos y reintentos
 
-La capa de persistencia aporta atomicidad e integridad relacional verificadas,
-pero todavía no constituye el servicio completo de importación.
-Ante una huella duplicada devuelve un error técnico de unicidad; el futuro
-servicio deberá recuperar la importación existente conforme a D09/D10.
+### Estado inicial
 
-Sesión 06 recomendada: desarrollar un servicio independiente de HTTP que coordine
-validación CSV, SHA-256 de bytes originales, reintentos, conflictos y persistencia,
-con pruebas reales de concurrencia. No traducir todo error de unicidad a 409.
-Posteriormente integrar multipart y respuestas HTTP 200/201/409, consultas
-públicas y límites de recepción. Todo ello requiere autorización del alcance.
+Repositorio limpio en `main`, commit `59dbc42`, coincidente con GitHub.
+Se revisaron instrucciones, documentación, contrato, módulos CSV/PostgreSQL y
+suites existentes. Se conserva la instancia PostgreSQL 18.6 de la sesión 05.
 
-Alex realizará la revisión, el commit y el push manuales desde GitHub Desktop.
+Una comprobación desde el sandbox no pudo ver correctamente el proceso.
+La comprobación con permisos confirmó que la instancia existente seguía operativa;
+el intento de arranque adicional fue rechazado sin crear otra instancia.
+No se reinstaló PostgreSQL, no se reinicializó el cluster y no se modificaron
+servicios de Windows, XAMPP, Docker ni WSL.
+
+### Implementación
+
+- `src/imports/import-service.ts`: servicio independiente de Express, entrada
+  de bytes originales y resultados tipados `created`, `existing`, `invalid`,
+  `conflict` y `persistence_error`.
+- Validación antes de cualquier operación de persistencia; SHA-256 exclusivamente
+  de bytes originales, calculado antes de la primera espera asíncrona.
+- Recuperación del identificador y cantidad originales; ninguna nueva escritura
+  cuando se recupera una importación confirmada.
+- Conflictos `SKU_ALREADY_EXISTS`, por fila/campo, ordenados y limitados a
+  100 detalles con truncamiento indicado.
+- Consulta de SKU en bloque e inserciones ordenadas para evitar ciclos por
+  orden inverso entre archivos concurrentes.
+- Restricciones únicas existentes y rollback como garantía frente a carreras.
+  Tras una infracción de unicidad se consulta primero la huella confirmada.
+  Una PK u otra UNIQUE no se convierte automáticamente en conflicto de SKU.
+- Transacciones READ COMMITTED, límites de espera y descarte de conexiones
+  afectadas; sin reintentos automáticos de escritura.
+- Distinción de COMMIT incierto: recuperación por huella o error técnico
+  controlado con `commit: unknown`; nunca éxito sin evidencia.
+
+No se han añadido dependencias, tablas ni migraciones, ni modificado las
+decisiones D01–D10. La API mantiene únicamente `GET /health`.
+Las decisiones y límites se detallan en [PERSISTENCIA](PERSISTENCIA.md).
+
+### Comprobaciones ejecutadas en la sesión 06
+
+| Comprobación | Resultado |
+| --- | --- |
+| `npm run typecheck` | Correcto |
+| `npm test` | 224 pruebas correctas en 5 archivos |
+| `npm run build` | Correcto |
+| `npm run test:integration` | 63 pruebas reales correctas en 2 archivos |
+
+Total: 287 pruebas ejecutadas sin omisiones; se conservan las 190 CSV/health
+y 45 PostgreSQL anteriores, con 34 pruebas nuevas del servicio/errores y
+18 nuevas de integración. Se corrigió una llamada de prueba no compatible
+con ES2022 sin cambiar la configuración de compilación.
+
+Las nuevas pruebas verifican:
+
+- Creación, recuperación idéntica, nombre externo irrelevante y huellas distintas
+  al cambiar BOM, LF/CRLF, espacios u orden.
+- Conflictos parciales sin modificar el catálogo, validación sin consultas,
+  rollback de una inserción intermedia y reintento de los mismos bytes.
+- Cuatro conexiones con PID distintos: una creación y tres recuperaciones.
+- Archivos distintos con SKU compartidos y orden inverso: una confirmación y
+  un conflicto completo; archivos independientes pueden confirmar ambos.
+- Carrera entre consulta inicial de huella y detección de SKU existentes.
+- Espera observable en PostgreSQL de una huella no confirmada: recuperación
+  después del commit o creación después del rollback del competidor.
+- Timeout real de espera, error controlado y reintento posterior.
+- COMMIT real con pérdida simulada de respuesta en el driver, recuperación
+  inmediata o incertidumbre controlada seguida de recuperación posterior.
+- Errores sin detalles sensibles, orden/truncamiento y liberación de conexiones.
+
+### PostgreSQL y entrega
+
+- Instancia existente operativa en `127.0.0.1:55432`, versión 18.6.
+- Base de integración exclusiva `importacion_validacion_datos_test`.
+- Cero esquemas temporales `csv_test_*` después de las pruebas.
+- Desarrollo conserva cero importaciones y cero productos.
+- Código CSV, aplicación/arranque HTTP, pruebas anteriores, migración publicada,
+  configuración y dependencias conservados.
+- Rama `main`, HEAD `59dbc42`; cambios locales sin staging, commit ni push.
+- La sesión 06 queda pendiente de revisión y publicación manual por Alex.
+
+## Limitaciones y siguiente sesión
+
+No hay todavía recepción multipart ni rutas HTTP de importación o consulta.
+Los resultados del servicio permiten implementar posteriormente el mapa aprobado.
+
+La prueba de pérdida de respuesta inyecta el fallo después de un COMMIT real;
+no reproduce una partición física de red ni una caída del sistema operativo.
+Si no se puede consultar una huella después de un COMMIT incierto, el servicio
+no puede demostrar el resultado y exige un reintento posterior de los mismos bytes.
+
+Los límites de espera son operativos; no constituyen pruebas de carga ni una
+promesa de latencia total. No hay bucles de reintento ilimitados.
+No quedan bloqueos para revisar esta entrega.
+
+Sesión 07 recomendada: integrar `POST /importaciones`, recepción multipart,
+límites de solicitud y traducción de resultados a HTTP, con pruebas del contrato.
+No ampliar el alcance a autenticación, frontend o despliegue.

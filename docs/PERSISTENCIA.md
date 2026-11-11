@@ -7,9 +7,9 @@ normalizados de processProductsCsv y una huella SHA-256 calculada por el llamado
 sobre los bytes originales. No interpreta CSV, recibe multipart ni decide
 respuestas HTTP. No registra intentos fallidos.
 
-La sesión 04 está publicada en b1cb2e2. La sesión 05 añade transacciones e
-integridad relacional; no completa todavía la coordinación de reintentos,
-la recuperación tras pérdida de respuesta ni las garantías HTTP 200/201/409.
+Las sesiones 04 y 05 están publicadas en b1cb2e2 y 59dbc42.
+La sesión 06 añade el servicio de coordinación descrito a continuación.
+La exposición HTTP 200/201/409 continúa pendiente.
 
 ## Entorno local Windows
 
@@ -171,12 +171,91 @@ sin detalles de consultas, credenciales ni valores. Por ejemplo, 23505 indica
 unicidad; 23514, CHECK; 23503, referencia inexistente; 23001, operación impedida
 por RESTRICT en PostgreSQL 18. No son todavía respuestas funcionales HTTP.
 
-Una huella repetida produce un error técnico de unicidad en esta capa.
-El futuro servicio deberá recuperar el resultado confirmado y responder 200
-según D09/D10; no debe convertir automáticamente todo 23505 en 409.
-Las pruebas actuales no demuestran la clasificación correcta bajo concurrencia.
-Una desconexión justo después de COMMIT requiere futura recuperación por huella;
-no se promete conocer el resultado de un commit cuya respuesta se pierde.
+Una huella repetida sigue produciendo una infracción técnica de unicidad en la
+capa SQL. ImportService la resuelve consultando de nuevo la huella confirmada.
+No convierte cualquier 23505 en conflicto de SKU. La recuperación y la
+incertidumbre de COMMIT se detallan en la sección siguiente.
+
+## Coordinación e idempotencia — sesión 06
+
+Entrada: ImportService.importCsv(Uint8Array). El servicio reutiliza
+processProductsCsv e ImportRepository, sin Express ni nombres de archivo.
+
+1. Validar CSV; un fallo devuelve invalid sin consultas ni escrituras.
+2. Calcular SHA-256 de los bytes originales, antes del primer await.
+3. Consultar la huella: si está confirmada, devolver existing.
+4. Consultar SKU en bloque. Si hay conflictos, volver a consultar la huella:
+   una solicitud idéntica pudo confirmar entre ambas lecturas.
+5. Intentar crear importación y productos en una transacción. Solo un COMMIT
+   reconocido permite devolver created.
+6. Ante 23505, después del rollback y liberación del cliente, consultar la huella
+   en una nueva lectura. Si existe, devolver existing con el resultado original.
+7. Solo productos_sku_unique permite clasificar un conflicto funcional, tras
+   comprobar los SKU reales y volver a priorizar la huella confirmada.
+   Una PK, otra UNIQUE o una huella sin resultado recuperable son errores técnicos.
+
+### Concurrencia sin bloqueo global
+
+La huella se inserta antes de los productos. La restricción UNIQUE hace esperar
+a un competidor idéntico hasta el commit o rollback de quien insertó primero.
+Si confirma, el competidor recupera la importación; si revierte, puede insertarla.
+No se usa ON CONFLICT DO NOTHING, upsert ni un mutex de proceso.
+
+Los productos se insertan por SKU ASCII ordenado, sobre una copia de la lista,
+para evitar ciclos de bloqueo debidos a órdenes opuestos entre archivos.
+El servicio mantiene la lista original para localizar los errores por fila.
+Dos archivos diferentes que comparten SKU no pueden confirmar ambos ese SKU.
+Las inserciones del perdedor se revierten completamente.
+
+Se usa READ COMMITTED explícito. Las lecturas posteriores al rollback solo ven
+resultados confirmados y no conservan el snapshot de la transacción fallida.
+No se añaden tablas ni se modifican migraciones publicadas.
+
+La [comprobación de unicidad de PostgreSQL](https://www.postgresql.org/docs/18/index-unique-checks.html)
+incluye la espera de transacciones pendientes; no se confía solo en una
+consulta previa que pueda quedar desactualizada.
+
+### Resultados de dominio
+
+| kind | Contenido |
+| --- | --- |
+| created | importacion con importacion_id, estado completada y productos_importados |
+| existing | Mismo formato, identificador y cantidad originales; ninguna nueva inserción |
+| invalid | Error contractual del procesador CSV |
+| conflict | SKU_ALREADY_EXISTS, detalles por fila/campo y truncamiento a 100 |
+| persistence_error | PERSISTENCE_ERROR o SERVICE_UNAVAILABLE, mensaje seguro y certeza de commit |
+
+No son respuestas HTTP. El adaptador futuro traducirá created/existing/conflict
+a 201/200/409 según el contrato, y conservará el resto de clasificaciones.
+Un error técnico no incluye credenciales, mensajes PostgreSQL, SQL ni datos
+de sus excepciones. No se persisten intentos fallidos.
+
+### Límites de espera y COMMIT incierto
+
+El pool espera hasta 5 s por conexión. Cada transacción limita la espera de
+bloqueos a 5 s y su duración a 30 s. Las sentencias tienen límite servidor de
+15 s y las consultas límite cliente de 20 s. Son límites operativos finitos,
+no una promesa de latencia total ni pruebas de carga.
+No hay reintentos automáticos de escritura ni bucles ilimitados.
+
+Un timeout o un bloqueo agotado devuelve error técnico controlado; no se
+inventa un conflicto ni una recuperación si el resultado aún no está confirmado.
+
+Si la conexión se interrumpe durante COMMIT, un ROLLBACK posterior no demuestra
+que el commit no ocurrió. PersistenceError marca commitUncertain; el cliente
+afectado se descarta y el servicio intenta una sola recuperación por huella.
+
+- Si encuentra una importación confirmada, devuelve existing.
+- Si no puede demostrar el resultado, devuelve persistence_error con
+  commit: unknown y SERVICE_UNAVAILABLE. No afirma éxito ni ausencia de escrituras.
+- Un reintento posterior con los mismos bytes vuelve a consultar la huella.
+- commit: not_confirmed identifica fallos sin confirmación propia y sin
+  incertidumbre de COMMIT detectada; no es un informe de ausencia global de datos.
+
+La pérdida de respuesta se prueba inyectando un error en el límite del driver
+después de un COMMIT ejecutado realmente en PostgreSQL, incluyendo fallo de la
+consulta de recuperación y reintento posterior. No es una prueba de partición
+física de red ni de caída del sistema operativo.
 
 ## Pruebas
 
@@ -187,8 +266,9 @@ npm run build
 npm run test:integration
 ~~~
 
-npm test conserva las 190 pruebas CSV/health, sin requerir base de datos.
-La suite de integración tiene 45 casos reales, con migración desde cero,
+npm test ejecuta 224 casos: 190 CSV/health y 34 del servicio y errores técnicos,
+sin requerir base de datos. La integración ejecuta 63 casos reales: 45 de
+persistencia y 18 de coordinación, con migración desde cero,
 reaplicación, rechazo de esquemas ajenos e historial alterado, inserción desde
 CSV, exactitud de céntimos, Unicode, consultas, claves, rangos, unicidad,
 rollback sin residuos y cierre/reutilización de conexiones.
@@ -197,8 +277,14 @@ Cada ejecución crea esquemas csv_test_<UUID> nuevos en la base exclusiva,
 ejecuta las migraciones y elimina únicamente los esquemas creados por ella.
 No vacía public, no trunca tablas compartidas y no reinicia bases existentes.
 Una interrupción forzosa podría dejar un esquema de esa ejecución: inspeccionarlo
-antes de cualquier limpieza manual. Los casos no son pruebas de carga ni una
-demostración completa de concurrencia.
+antes de cualquier limpieza manual.
+
+La suite de coordinación usa pools independientes de una conexión, verifica
+PID distintos y sincroniza las carreras después de las consultas iniciales.
+Prueba cuatro archivos idénticos simultáneos, archivos distintos con SKU
+compartidos y orden inverso, espera observable de una transacción pendiente,
+commit/rollback del competidor, timeout, fallo de inserción y recuperación de
+respuesta perdida. No son pruebas de carga ni cobertura de todo fallo de red.
 
 Referencias técnicas: [transacciones con pg](https://node-postgres.com/features/transactions),
 [consultas parametrizadas](https://node-postgres.com/features/queries) y

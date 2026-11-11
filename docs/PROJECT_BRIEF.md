@@ -32,7 +32,7 @@ multiusuario en la primera versión.
 Una importación inválida no debe dejar productos parcialmente guardados.
 V1 no almacena de forma persistente intentos fallidos, según D08.
 El modelo de datos y la transacción inicial se implementan en la sesión 05;
-la coordinación funcional y concurrente se completará después.
+la coordinación funcional y concurrente se incorpora en la sesión 06.
 
 ## Sesión 01 — Completada
 
@@ -73,7 +73,9 @@ No incorpora recepción HTTP, multipart, persistencia, transacciones, conflictos
 contra catálogo, idempotencia persistente ni concurrencia.
 Alex confirmó y publicó esos cambios. La capa CSV permanece independiente.
 
-## Sesión 05 — PostgreSQL y persistencia transaccional
+## Sesión 05 — PostgreSQL y persistencia transaccional, publicada
+
+Alex publicó esta entrega en `59dbc42`.
 
 - Instancia PostgreSQL local aislada autorizada por Alex, con bases separadas.
 - Modelo mínimo de importaciones y productos, migración SQL versionada y driver pg.
@@ -83,8 +85,21 @@ Alex confirmó y publicó esos cambios. La capa CSV permanece independiente.
 - Documentación del modelo y preparación en [PERSISTENCIA](PERSISTENCIA.md).
 
 No incorpora rutas, multipart, interfaz, autenticación, despliegue ni clasificación
-funcional de respuestas 200/201/409. Los cambios de esta sesión quedan locales
-para revisión y publicación manual por Alex.
+funcional de respuestas 200/201/409 durante la sesión 05.
+
+## Sesión 06 — Coordinación de importaciones
+
+- Servicio independiente de Express que valida CSV antes de consultar PostgreSQL.
+- SHA-256 de bytes originales, recuperación por huella y conflictos de SKU.
+- Una sola creación para archivos idénticos concurrentes; recuperación posterior
+  del identificador y cantidad confirmados.
+- Rechazo completo de archivos diferentes con SKU existentes, sin upsert.
+- Recuperación tras rollback de unicidad y distinción de COMMIT incierto.
+- Pruebas con conexiones independientes, barreras de sincronización y fallos
+  controlados, conservando las suites anteriores.
+- Sin cambios de esquema, dependencias, rutas ni infraestructura.
+
+Los cambios de sesión 06 quedan locales para revisión y publicación manual.
 
 ## Exclusiones
 
@@ -105,8 +120,8 @@ errores y respuestas HTTP. No quedan decisiones D01–D10 pendientes de aprobaci
 
 El parsing y la validación en memoria están implementados en `src/csv/`.
 La sesión 05 añade persistencia con UUID, precios enteros, relaciones y consultas
-internas. Quedan recepción multipart, contratos de consulta HTTP y coordinación
-de reintentos/conflictos bajo concurrencia. Los límites aprobados de V1 se
+internas. La sesión 06 coordina reintentos y conflictos bajo concurrencia.
+Quedan recepción multipart y contratos de consulta HTTP. Los límites aprobados de V1 se
 evaluarán con futuras pruebas de carga; no se modifican en esta sesión.
 
 ## Criterios de finalización de la primera versión
@@ -164,6 +179,15 @@ cerradas/liberadas correctamente. Las pruebas existentes, tipos y compilación
 deben seguir pasando. No considerar validada la persistencia si se omite la
 integración por falta de entorno.
 
-Próxima sesión recomendada: un servicio independiente de HTTP que coordine
-validación, huella, conflictos y persistencia, con pruebas de reintentos y
-concurrencia. La integración HTTP vendrá después. Requiere autorización expresa.
+La sesión 05 está publicada en `59dbc42`; sus resultados se consideran históricos.
+
+## Criterios de cierre de la sesión 06
+
+Resultados tipados para creación, recuperación, CSV inválido, conflicto y fallo
+técnico; huella de bytes originales, prioridad de repetición exacta, atomicidad
+y unicidad verificadas con conexiones PostgreSQL independientes.
+La incertidumbre de COMMIT se representa sin afirmar éxito ni rollback no probado.
+
+Próximo paso recomendado: recepción multipart y traducción a respuestas HTTP
+mediante `POST /importaciones`, con pruebas de límites y del contrato.
+Requiere autorización expresa y no se implementa en esta sesión.

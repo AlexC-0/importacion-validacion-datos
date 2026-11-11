@@ -1,7 +1,11 @@
 import { Pool, type PoolClient } from 'pg';
 
 export class PersistenceError extends Error {
-  constructor(public readonly code: string, public readonly constraint?: string) {
+  constructor(
+    public readonly code: string,
+    public readonly constraint?: string,
+    public readonly commitUncertain = false,
+  ) {
     super('La operación PostgreSQL no se ha completado.');
     this.name = 'PersistenceError';
   }
@@ -9,9 +13,11 @@ export class PersistenceError extends Error {
 
 export function persistenceError(error: unknown): PersistenceError {
   if (error instanceof PersistenceError) return error;
-  const details = error as { code?: unknown; constraint?: unknown } | null;
+  const details = error as { code?: unknown; constraint?: unknown; message?: unknown } | null;
+  const timedOut = details?.message === 'Query read timeout' ||
+    details?.message === 'timeout exceeded when trying to connect';
   return new PersistenceError(
-    typeof details?.code === 'string' ? details.code : 'UNKNOWN',
+    typeof details?.code === 'string' ? details.code : timedOut ? 'ETIMEDOUT' : 'UNKNOWN',
     typeof details?.constraint === 'string' ? details.constraint : undefined,
   );
 }
@@ -39,6 +45,7 @@ export function createDatabasePool(
     connectionTimeoutMillis: 5000,
     idleTimeoutMillis: 10000,
     statement_timeout: 15000,
+    query_timeout: 20000,
     application_name: 'importacion-validacion-datos',
     options: '-c search_path=' + schema + ',pg_catalog',
   });
@@ -53,17 +60,26 @@ export async function inTransaction<T>(
 ): Promise<T> {
   let client: PoolClient | undefined;
   let discard = false;
+  let committing = false;
   try {
     client = await pool.connect();
-    await client.query('BEGIN');
+    await client.query('BEGIN ISOLATION LEVEL READ COMMITTED');
+    await client.query("SET LOCAL lock_timeout = '5s'");
+    await client.query("SET LOCAL transaction_timeout = '30s'");
     const result = await work(client);
+    committing = true;
     await client.query('COMMIT');
     return result;
   } catch (error) {
+    const failure = persistenceError(error);
+    const connectionFailure = !/^[0-9A-Z]{5}$/.test(failure.code) ||
+      failure.code.startsWith('08') || ['57P01', '57P02', '57P03'].includes(failure.code);
+    const uncertain = committing && connectionFailure;
+    if (connectionFailure) discard = true;
     if (client) {
       try { await client.query('ROLLBACK'); } catch { discard = true; }
     }
-    throw persistenceError(error);
+    throw new PersistenceError(failure.code, failure.constraint, uncertain);
   } finally {
     client?.release(discard);
   }

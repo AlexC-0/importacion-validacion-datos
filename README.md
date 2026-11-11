@@ -25,11 +25,13 @@ La sesión 04 está publicada en `b1cb2e2` e incorpora un procesador CSV indepen
 Valida los bytes originales, normaliza productos, detecta SKU duplicados dentro
 del archivo y devuelve errores por fila y campo, sin productos parcialmente aceptados.
 
-La sesión 05 incorpora PostgreSQL local, migración del esquema y persistencia
+La sesión 05 está publicada en `59dbc42` e incorpora PostgreSQL local, migración del esquema y persistencia
 transaccional de importaciones y productos, con consultas internas y pruebas reales.
 
-Quedan pendientes recepción multipart, nuevas rutas, clasificación funcional de
-conflictos/reintentos y coordinación de solicitudes concurrentes.
+La sesión 06 incorpora un servicio que coordina validación, huella de bytes,
+creación transaccional, conflictos, reintentos y solicitudes concurrentes.
+
+Quedan pendientes recepción multipart y exposición mediante nuevas rutas HTTP.
 La API sigue exponiendo únicamente `GET /health`. No hay despliegue.
 
 ## Tecnologías y requisitos
@@ -168,7 +170,46 @@ npm run db:local -- -Action Stop
 Consulta [el diseño y la preparación desde cero](docs/PERSISTENCIA.md) para las
 variables, tablas, migraciones y uso de `ImportRepository`.
 El driver `pg` y `@types/pg` son las únicas dependencias añadidas.
-La capa aún no decide respuestas HTTP 200/201/409 ni coordina reintentos.
+La capa SQL se utiliza mediante el nuevo servicio de aplicación para coordinar
+reintentos y conflictos. Todavía no hay respuestas HTTP de importación.
+
+## Servicio de importación
+
+`ImportService`, en `src/imports/import-service.ts`, recibe los bytes originales
+y reutiliza el procesador CSV y `ImportRepository`. No depende de Express.
+
+```typescript
+import { ImportService } from './src/imports/import-service.js';
+import { ImportRepository } from './src/persistence/import-repository.js';
+import { createDatabasePool, requiredDatabaseUrl } from './src/persistence/database.js';
+
+const pool = createDatabasePool(requiredDatabaseUrl());
+try {
+  const service = new ImportService(new ImportRepository(pool));
+  const result = await service.importCsv(Buffer.from(
+    'sku,nombre,precio_eur,stock\nA-1,Café,0.29,2',
+  ));
+  console.log(result.kind);
+} finally {
+  await pool.end();
+}
+```
+
+El resultado distingue `created`, `existing`, `invalid`, `conflict` y
+`persistence_error`. Los dos éxitos contienen el mismo formato de
+`importacion`: identificador, estado completada y cantidad original.
+Un error técnico distingue `commit: not_confirmed` de `commit: unknown`;
+el segundo requiere reintentar los mismos bytes para resolver la incertidumbre.
+
+Solo bytes exactamente iguales recuperan una importación existente.
+Cambiar BOM, finales de línea, espacios u orden produce otra huella y puede
+generar conflictos de SKU. Los conflictos conservan filas originales, campo
+`sku` y el límite de 100 detalles. Un CSV inválido no accede a PostgreSQL.
+
+Las restricciones únicas coordinan las escrituras simultáneas. Tras rollback,
+la huella confirmada tiene prioridad sobre el conflicto de SKU. Los tiempos de
+espera son finitos y no hay bucles de reintento de escrituras.
+Consulta [PERSISTENCIA](docs/PERSISTENCIA.md) para las garantías y limitaciones.
 
 ## Pruebas y comprobaciones
 
@@ -185,8 +226,9 @@ Las pruebas CSV cubren sintaxis, normalización, gramáticas y rangos, duplicado
 localización y prioridad de errores, rechazo completo y límites.
 Los casos grandes se construyen en memoria.
 
-`npm test` ejecuta las 190 pruebas existentes sin PostgreSQL. Las 45 pruebas
-reales de persistencia se ejecutan por separado con `npm run test:integration`;
+`npm test` ejecuta 224 pruebas sin PostgreSQL: las 190 anteriores y 34 del servicio
+y sus errores técnicos. Las 63 pruebas reales de persistencia y coordinación
+se ejecutan por separado con `npm run test:integration`;
 requieren la base exclusiva `importacion_validacion_datos_test` y no se omiten
 silenciosamente si falta configuración.
 
@@ -210,6 +252,8 @@ src/
     parse-csv.ts          # Sintaxis, cabecera, filas y columnas
     validate-products.ts  # Normalización, campos y duplicados internos
     types.ts              # Tipos, límites y errores
+  imports/
+    import-service.ts     # Coordinación, huellas, conflictos y reintentos
   persistence/
     database.ts           # Pool, transacción y errores técnicos
     import-repository.ts  # Inserciones y consultas parametrizadas
@@ -224,7 +268,9 @@ tests/
   csv-parser.test.ts     # Codificación y estructura CSV
   csv-products.test.ts   # Validación y normalización
   csv-limits.test.ts     # Límites, prioridad y rechazo completo
+  import-service.test.ts # Decisiones del servicio y errores técnicos
   integration/persistence.test.ts # Pruebas reales en base aislada
+  integration/import-service.test.ts # Carreras con conexiones independientes
 docs/
   PROJECT_BRIEF.md        # Alcance y criterios de finalización
   STATUS.md               # Estado real y siguiente paso
@@ -249,9 +295,8 @@ en castellano y una Description fiel al trabajo realizado; tiene prohibido
 ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
 no modifique expresamente esta norma.
 
-Las sesiones 02, 03 y 04 ya están publicadas. La sesión 05 queda local,
+La sesión 05 está publicada en `59dbc42`. La sesión 06 queda local,
 pendiente de revisión, commit y push manuales.
 
-Próximo paso recomendado: implementar el servicio que coordine validación,
-huella, conflictos y persistencia, con pruebas de reintentos y concurrencia.
-La recepción HTTP se integrará posteriormente respetando las respuestas del contrato.
+Próximo paso recomendado: recepción multipart y adaptación de resultados del
+servicio a `POST /importaciones`, con límites y respuestas HTTP del contrato.

@@ -21,8 +21,9 @@ La sección 14 separa los aspectos internos de implementación aún pendientes.
 La aprobación del contrato no autoriza por sí sola implementar el importador.
 Estado de implementación: la sesión 04 incorporó validación CSV en memoria;
 la sesión 05 añade tablas PostgreSQL, persistencia transaccional y pruebas reales.
-No hay recepción HTTP ni servicio completo que coordine reintentos y conflictos.
-`GET /health` permanece igual. Las reglas aprobadas no cambian.
+La sesión 06 añade el servicio de coordinación, reintentos y conflictos, con
+pruebas de concurrencia. No hay recepción HTTP de archivos; `GET /health`
+permanece igual. Las reglas aprobadas no cambian.
 
 ## 1. Codificación y delimitador aprobados — D01
 
@@ -371,8 +372,8 @@ se diseñarán posteriormente; no se incorporan nuevos endpoints en esta sesión
 
 Los siguientes casos expresan el contrato completo aprobado. Las pruebas de la
 sesión 04 cubren el contenido CSV y sus errores en memoria; la sesión 05
-añade pruebas de persistencia, restricciones y rollback. Los resultados HTTP,
-la recuperación de repeticiones y la coordinación concurrente siguen pendientes.
+añade pruebas de persistencia, restricciones y rollback. La sesión 06 verifica
+recuperación y coordinación concurrente. La exposición HTTP sigue pendiente.
 
 ### Archivo válido
 
@@ -458,26 +459,24 @@ de D10 a recuperación de repeticiones exactas mediante HTTP 200.
 
 Las reglas anteriores siguen aprobadas. Avance de implementación:
 
-- Sesión 04 publicada en `b1cb2e2`: parser acotado sin dependencias y validación
-  en memoria, organizados en `src/csv/`.
-- Sesión 05: modelo PostgreSQL, identificadores UUID, migración versionada,
-  restricciones de unicidad/FK/rangos, transacción y consultas internas.
-  El diseño y sus límites se documentan en [PERSISTENCIA](PERSISTENCIA.md).
+- Sesión 04 publicada en `b1cb2e2`: parsing y validación CSV en memoria.
+- Sesión 05 publicada en `59dbc42`: PostgreSQL, UUID, migración, restricciones,
+  persistencia transaccional y consultas internas.
+- Sesión 06: servicio que coordina validación, huella, conflictos y creación,
+  con recuperación tras unicidad y pruebas con conexiones independientes.
+
+La estrategia, los resultados tipados, los límites de espera y la incertidumbre
+de COMMIT se documentan en [PERSISTENCIA](PERSISTENCIA.md).
+Si una recuperación después de un COMMIT incierto no puede demostrar el
+resultado, se devuelve error técnico controlado; un reintento posterior puede
+resolverlo por la misma huella. No se afirma éxito sin evidencia.
 
 Quedan pendientes:
 
-- Recepción multipart, gestión de sus recursos y límites HTTP.
-- Servicio que coordine huella, conflictos y recuperación del resultado,
-  incluyendo carreras concurrentes y pérdida de respuesta tras commit.
-- Adaptación HTTP 200/201/409 y demás respuestas aprobadas.
+- Recepción multipart, gestión de recursos y límites HTTP.
+- Exposición HTTP de los resultados mediante las respuestas aprobadas.
 - Rutas y contratos de consulta HTTP de productos e importaciones.
-- Evaluación de límites con pruebas de carga, sin cambiar los valores aprobados.
+- Evaluación de límites con pruebas de carga y pruebas de fallos físicos de red.
 
-Una huella duplicada produce actualmente una infracción técnica de unicidad en
-la capa de persistencia. Eso no modifica D10: el futuro servicio deberá recuperar
-la importación confirmada y devolver 200. No debe traducir todo error de unicidad
-a 409. Las garantías de coordinación aún no se consideran implementadas ni probadas.
-
-Próximo paso recomendado: preparar ese servicio y sus pruebas de reintentos y
-concurrencia con autorización expresa, antes de conectar la recepción HTTP.
-Los commits y push siguen siendo manuales y exclusivos del usuario.
+Las reglas, la tabla D01–D10 y los ejemplos de las secciones anteriores se
+conservan. Los commits y push siguen siendo manuales y exclusivos del usuario.

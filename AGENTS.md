@@ -7,10 +7,12 @@
 - Inspecciona primero la ruta, `git status --short --branch`, la rama y los remotos.
 - Trabaja exclusivamente dentro de este proyecto independiente. No modifiques
   archivos, historial ni remotos de otros proyectos.
-- La sesión 05 autoriza PostgreSQL, modelo relacional, migraciones, persistencia
-  transaccional y pruebas de integración, independientes de HTTP.
-- No añadas rutas ni multipart, ni anticipes la clasificación funcional de
-  reintentos o las respuestas 200/201/409. Conserva las garantías del contrato.
+- La sesión 06 autoriza un servicio de importación, resolución de reintentos,
+  conflictos y concurrencia, con pruebas unitarias y PostgreSQL real.
+- No añadas rutas ni multipart. Los resultados de dominio se adaptarán a HTTP
+  posteriormente. No alteres D01–D10 ni migraciones ya publicadas.
+- Usa la instancia PostgreSQL existente, comprobando su estado antes de arrancarla;
+  no reinstales PostgreSQL ni reinicialices el cluster.
 - Antes de instalar software o iniciar servicios nuevos, solicita autorización.
   Alex autorizó PostgreSQL local aislado en `.local/`, con acceso únicamente
   por `127.0.0.1:55432`, bases de desarrollo y pruebas separadas y sin servicio

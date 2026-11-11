@@ -26,7 +26,8 @@ export class ImportRepository {
     versionContrato?: 'csv-v1';
   }): Promise<StoredImport> {
     // Copiar antes del primer await evita cambios del llamador durante la transacción.
-    const productos = input.productos.map((product) => ({ ...product }));
+    const productos = input.productos.map((product) => ({ ...product }))
+      .sort((a, b) => a.sku < b.sku ? -1 : a.sku > b.sku ? 1 : 0);
     const sha256 = input.sha256;
     const version = input.versionContrato ?? 'csv-v1';
     if (
@@ -51,6 +52,16 @@ export class ImportRepository {
       }
       return result;
     });
+  }
+
+  /** Consulta en bloque; los límites de detalle y el orden de filas pertenecen al servicio. */
+  async findExistingSkus(skus: readonly string[]): Promise<string[]> {
+    try {
+      const result = await this.pool.query<{ sku: string }>(
+        'SELECT sku FROM productos WHERE sku = ANY($1::text[])', [skus],
+      );
+      return result.rows.map((row) => row.sku);
+    } catch (error) { throw persistenceError(error); }
   }
 
   async findImportById(id: string): Promise<StoredImport | null> {
