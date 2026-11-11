@@ -18,7 +18,7 @@ corregirlos y evite persistir importaciones parciales o repetidas.
 Estos perfiles describen usos previstos; no implican autenticación ni gestión
 multiusuario en la primera versión.
 
-## Funcionalidades previstas para la primera versión
+## Funcionalidades implementadas para la primera versión
 
 1. Recibir archivos CSV de productos mediante una API REST.
 2. Validar formato y datos de cada registro.
@@ -135,14 +135,26 @@ Contrato: [HTTP_CONSULTAS](HTTP_CONSULTAS.md). Alex publicó esta entrega en
 - 453 pruebas correctas, tipos y build, también desde una copia limpia.
 - Migración y reaplicación en una base temporal nueva; HTTP real y limpieza.
 - Workflow Linux con Node.js 24/PostgreSQL 18, credenciales desechables y
-  permisos de lectura; publicado en 61eff54, con primera ejecución fallida.
+  permisos de lectura; publicado en 61eff54. La primera ejecución falló y
+  la corrección 09.1 publicada en 90b0066 pasó la CI completa.
 - Sin nuevas funcionalidades, dependencias, tablas ni cambios de D01–D10.
 
 Evidencia y pasos: [VALIDACION_V1](VALIDACION_V1.md). Alex publicó la sesión 09
 en 61eff54. La sesión 09.1 corrige la expansión del glob en test y test:watch
 que hizo fallar npm test en la primera CI. Las 453 pruebas pasan localmente;
-la corrección queda pendiente de publicación y nueva verificación remota.
-V1 no se declara cerrada hasta revisar una ejecución completa correcta.
+la corrección está publicada en 90b0066 y la CI 43102797061 terminó en SUCCESS.
+
+## Sesión 10 — Revisión de cierre y evidencias técnicas
+
+Se contrastaron los criterios de V1 con contratos, código y suites existentes.
+No se identificaron incumplimientos funcionales dentro del alcance aprobado.
+La [ficha de evidencias](EVIDENCIAS_V1.md) documenta capacidades, arquitectura,
+decisiones, alternativas, límites y referencias públicas verificadas.
+
+La V1 está técnicamente preparada para cierre formal. La entrega documental
+sigue local: el cierre definitivo queda condicionado a revisión, publicación
+manual y comprobación de la CI correspondiente a su nuevo commit. No se
+traslada el SUCCESS de 90b0066 a un commit posterior.
 
 ## Exclusiones
 
@@ -166,8 +178,9 @@ La sesión 05 añade persistencia con UUID, precios enteros, relaciones y consul
 internas. La sesión 06 coordina reintentos y conflictos bajo concurrencia.
 La sesión 07 añade recepción multipart y respuestas HTTP de importación.
 La sesión 08 incorpora el contrato y las rutas de consulta HTTP.
-La sesión 09 comprueba el conjunto y prepara CI; falta verificar su ejecución
-remota antes del cierre definitivo. Los límites aprobados de V1 se
+La sesión 09 comprueba el conjunto y prepara CI; la corrección 09.1 supera
+la ejecución remota 43102797061. La sesión 10 documenta el cierre técnico;
+su publicación y CI quedan pendientes para el cierre definitivo. Los límites aprobados de V1 se
 evaluarán con futuras pruebas de carga; no se modifican en esta sesión.
 
 ## Criterios de finalización de la primera versión
@@ -185,6 +198,12 @@ evaluarán con futuras pruebas de carga; no se modifican en esta sesión.
   reproducibles, sin secretos en el repositorio.
 - La CI de la candidata debe ejecutarse en GitHub y revisarse sobre el commit
   publicado manualmente antes de declarar cerrada V1.
+
+Resultado de revisión de la sesión 10: criterios funcionales y de reproducción
+cumplidos con evidencia local histórica y CI Linux sobre 90b0066, 453 pruebas.
+La [matriz A–G](VALIDACION_V1.md#matriz-de-aceptación) relaciona requisitos y suites.
+Solo queda revisar/publicar esta entrega y verificar su CI para el cierre formal;
+las exclusiones no generan obligaciones de implementación adicionales.
 
 ## Criterios de cierre de la sesión 01
 
@@ -259,5 +278,13 @@ La sesión 08 está publicada en `cb4e48c`.
 
 Candidata comprobada localmente, instalación reproducida, datos de prueba
 limpios, documentación coherente y CI preparada. No confundir esos resultados
-con una ejecución remota: Alex debe publicar y revisar Actions antes de cerrar V1.
-No se crean tags, releases ni despliegues en esta sesión.
+con una ejecución remota: esta se verificó después en 43102797061 para 90b0066.
+No se crean tags, releases ni despliegues.
+
+## Criterios de cierre de la sesión 10
+
+Documentación coherente con el código, evidencia de commit/CI exactos, matriz
+satisfecha y límites explícitos. La revisión documental no sustituye una ejecución
+de pruebas; no se repite la suite sin cambios de código. Los cambios permanecen
+sin staging, commit ni push. Cierre definitivo tras revisión y publicación manuales
+y verificación de la CI del commit documental.

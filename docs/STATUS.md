@@ -25,8 +25,13 @@ Fecha de actualización: 11 de noviembre de 2026.
 - Al iniciar la sesión 09, main, origin/main y GitHub coincidían en cb4e48c;
   no había cambios pendientes. La sesión 09 se entregó sin staging y Alex
   la publicó en `61eff54` (`61eff54655ec365f177fc109ebef60ff44b6f84b`).
-- Al iniciar la sesión 09.1, main y origin/main coinciden en 61eff54, sin cambios
-  pendientes. La primera CI falló en npm test; la corrección 09.1 queda local.
+- La sesión 09.1 se inició en 61eff54 limpio, tras fallar la primera CI.
+  Alex publicó su corrección en `90b0066e7210cbecd6dc06dce0ddc6db5813033b`.
+- Sesión 10: main local, origin/main y main remoto coinciden en 90b0066, árbol
+  f74aa16336e963bbba80fab464785237ebb58326, sin cambios pendientes al comenzar.
+- CI 43102797061: SUCCESS sobre 90b0066, 364 pruebas normales y 89 de integración.
+- V1 técnicamente preparada para cierre formal; pendiente revisión/publicación
+  manual de esta entrega documental y CI de su propio commit.
 - Versión del proyecto en `package.json`: `0.1.0`.
 - La API no está desplegada. Publicar código en GitHub no inicia un servicio.
 
@@ -704,13 +709,82 @@ migración/reaplicación e integración con TEST_DATABASE_URL solo en su paso.
 No se proporcionan credenciales de base al paso de pruebas normales para ocultar
 el fallo. Código, contratos D01–D10, pruebas, lock y migraciones sin cambios.
 
-### Estado y nueva comprobación remota pendiente
+### Entrega de 09.1 y publicación posterior
 
-README, PROJECT_BRIEF y VALIDACION_V1 registran la publicación de la sesión 09
-y el fallo inicial. Esta corrección queda sin staging, commit ni push en main,
-sobre 61eff54. Alex debe revisarla y publicarla mediante GitHub Desktop.
-Después se comprobará una nueva ejecución asociada al nuevo commit; repetir
-la ejecución de 61eff54 no incorporaría estos cambios. V1 permanece abierta.
+README, PROJECT_BRIEF y VALIDACION_V1 registraron la publicación de la sesión 09
+y el fallo inicial. La corrección se entregó sin staging, commit ni push, sobre
+61eff54. Alex la publicó después en 90b0066; la nueva CI terminó en SUCCESS.
+La sesión 10 verifica esa ejecución y prepara el cierre documental.
+
+## Sesión 10 — Cierre documental y evidencias técnicas
+
+### Inspección y revisión de alcance
+
+Carpeta independiente `C:/Users/kaosk/source/repos/importacion-validacion-datos`,
+main limpio y origin correcto. Se contrastaron HEAD/origin/main con main remoto
+y el commit de CI: 90b0066e7210cbecd6dc06dce0ddc6db5813033b. Árbol Git coincidente
+f74aa16336e963bbba80fab464785237ebb58326; los archivos publicados corresponden
+a la base local revisada. No había cambios del usuario que preservar.
+
+Revisados AGENTS, alcance, contratos CSV/HTTP, workflow, componentes CSV,
+servicio, persistencia, rutas, arranque y pruebas representativas. La matriz
+A–G tiene evidencia satisfactoria para validación/normalización, importación
+transaccional, recuperación, conflictos/concurrencia, multipart, health,
+consultas/paginación/filtros, errores, migraciones y cierre de recursos.
+No se identificaron criterios funcionales incumplidos dentro del alcance V1.
+D01–D10 permanecen intactas.
+
+### CI remota consultada en esta sesión
+
+- Commit: [90b0066e7210cbecd6dc06dce0ddc6db5813033b](https://github.com/AlexC-0/importacion-validacion-datos/commit/90b0066e7210cbecd6dc06dce0ddc6db5813033b).
+- Ejecución: [43102797061](https://github.com/AlexC-0/importacion-validacion-datos/actions/runs/43102797061), job 130798295719.
+- Estado completed, conclusión **SUCCESS**, intento 1, push a main.
+- Fecha: 11/11/2026, inicio 21:24:38 UTC y actualización final 21:25:19 UTC
+  (22:24:38–22:25:19 Europe/Madrid).
+- Plataforma: Ubuntu 24.04, Node.js 24.22.2 y PostgreSQL 18.6.
+
+| Paso remoto | Evidencia de los pasos y logs |
+| --- | --- |
+| npm ci | Correcto |
+| npm run typecheck | Correcto |
+| npm test | 364 pruebas / 9 archivos, ninguna suite de integración |
+| npm run build | Correcto |
+| npm run db:migrate, primera vez | 001_initial.sql aplicada |
+| npm run db:migrate, segunda vez | Esquema actualizado, sin pendientes |
+| npm run test:integration | 89 pruebas / 5 archivos |
+
+Total: 453 casos satisfactorios. La aceptación del servidor compilado pasó en
+Linux con SIGTERM real. La primera CI de 61eff54 sigue registrada como fallida;
+no se reescribe su resultado. Las ejecuciones locales de 09/09.1 son históricas.
+En la sesión 10 no se ejecutan otra vez typecheck, test, build o integración,
+al no existir cambios de código. Consultar logs no equivale a repetir pruebas.
+El SUCCESS citado no se atribuye al futuro commit de esta documentación.
+
+### Documentación y entrega
+
+README resumido: problema, capacidades, arquitectura, puesta en marcha,
+ejemplos, pruebas, límites y enlaces técnicos. Nueva ficha EVIDENCIAS_V1 con
+usuarios previstos, decisiones/alternativas, casos representativos, evidencia
+reproducible y límites. STATUS, PROJECT_BRIEF y VALIDACION_V1 actualizan la
+publicación de 09.1 y el resultado remoto. AGENTS ajusta el alcance de sesión;
+PERSISTENCIA actualiza la referencia al cierre Linux ya comprobado.
+
+No se modifican código, pruebas, dependencias, configuración, contratos,
+migraciones, datos ni infraestructura. Sin publicaciones profesionales,
+portfolio/CV, tags, releases ni despliegues. La versión package.json sigue 0.1.0;
+V1 identifica el alcance funcional, no una etiqueta creada en Git.
+
+Comprobaciones documentales de sesión 10: git diff --check correcto; 67 enlaces
+locales y sus anclas, 11 ejemplos JSON, 6 bloques CSV con sus resultados válidos
+o inválidos previstos y sintaxis de un ejemplo TypeScript comprobados. Bloques
+Markdown cerrados. Referencias remotas contrastadas con commit, árbol, run,
+pasos y logs. No se detectaron valores de credenciales locales en los 50
+archivos versionables. Sin cambios en los archivos funcionales protegidos.
+Estas comprobaciones de ejemplos no son una nueva ejecución de las 453 pruebas.
+
+La V1 está técnicamente preparada para cierre formal. Esta entrega queda local,
+sin staging, commit ni push, sobre 90b0066. El cierre definitivo queda condicionado
+a revisión y publicación manual de Alex y a comprobar la CI de ese nuevo commit.
 
 ## Limitaciones y siguiente sesión
 
@@ -726,7 +800,8 @@ frontend, autenticación ni despliegue.
 La cobertura de COMMIT incierto sigue usando fallos inyectados en el driver;
 no es una prueba de corte físico de red. No quedan bloqueos de implementación.
 
-Siguiente paso: revisión y publicación manual de la corrección 09.1; después,
-verificar en GitHub Actions la ejecución del nuevo commit en main y registrar
-su URL/resultado. Solo con esa evidencia podrá declararse cerrada V1.
-Las pruebas de carga y fallos físicos de red siguen fuera de esta entrega.
+Siguiente paso: revisión/publicación manual de la entrega documental de sesión 10
+y comprobar su CI exacta para registrar el cierre definitivo. La corrección 09.1
+ya está publicada y su CI es correcta. Las limitaciones de carga, red, interfaz,
+autenticación y despliegue están fuera del alcance aprobado; no son tareas
+obligatorias para cerrar V1 ni autorizan por sí mismas una ampliación.

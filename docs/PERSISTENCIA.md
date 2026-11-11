@@ -319,10 +319,11 @@ commit/rollback del competidor, timeout, fallo de inserción y recuperación de
 respuesta perdida. No son pruebas de carga ni cobertura de todo fallo de red.
 
 La [guía V1](VALIDACION_V1.md) reúne la matriz de aceptación, configuración
-en Linux/Windows, reproducción desde copia limpia y el estado pendiente de CI.
+en Linux/Windows, reproducción desde copia limpia y la CI verificada de 90b0066.
 La prueba de aceptación usa un esquema propio y comprueba cero conexiones del
 servidor al terminar. En Windows invoca por IPC el manejador SIGTERM; en Linux
-señaliza el proceso con SIGTERM real, pendiente de ejecución remota.
+señaliza el proceso con SIGTERM real, comprobado en la CI 43102797061.
+Evidencia y límites del cierre formal en [EVIDENCIAS_V1](EVIDENCIAS_V1.md).
 
 Referencias técnicas: [transacciones con pg](https://node-postgres.com/features/transactions),
 [consultas parametrizadas](https://node-postgres.com/features/queries) y

@@ -1,380 +1,196 @@
 # Importación y validación de datos
 
-Una API REST para importar productos desde
-archivos CSV, validar los datos y guardar importaciones válidas en PostgreSQL.
+API REST para importar catálogos de productos desde CSV, detectar datos inválidos
+y duplicados, y guardar únicamente importaciones completas en PostgreSQL.
+Permite consultar los productos y el historial de importaciones confirmadas.
 
-## Estado actual
+Proyecto 01 de CHAMBA DIARIA. Pensado para personas que preparan catálogos y
+equipos técnicos que los envían mediante HTTP; no implica usuarios reales ni
+uso en producción.
 
-La base de la sesión 01 está publicada en el repositorio público
-[AlexC-0/importacion-validacion-datos](https://github.com/AlexC-0/importacion-validacion-datos),
-en la rama principal `main`, con el commit inicial `852e829`.
-La versión actual del proyecto en `package.json` es `0.1.0`.
+## Estado y evidencia
 
-Está preparada la API con Express y TypeScript, el endpoint `GET /health`
-y su prueba con Vitest y Supertest. La documentación de la sesión 02 se publicó
-en `cb89a65` y quedó integrada en `main` mediante `52bc5c1`.
+V1 funcional implementada y técnicamente preparada para cierre formal.
+La sesión 09.1 está publicada en
+[90b0066](https://github.com/AlexC-0/importacion-validacion-datos/commit/90b0066e7210cbecd6dc06dce0ddc6db5813033b).
+Su [CI 43102797061](https://github.com/AlexC-0/importacion-validacion-datos/actions/runs/43102797061)
+terminó en **SUCCESS** el 11 de noviembre de 2026: instalación, tipos,
+364 pruebas normales, compilación, migraciones y 89 pruebas de integración.
 
-Durante la sesión 03, Alex Cobián aprobó D01–D10 del
-[contrato CSV V1](docs/CONTRATO_CSV.md): una importación nueva confirmada devuelve
-201; el reenvío exacto recupera el resultado existente con 200, sin nuevas
-inserciones; otro archivo con SKU existentes devuelve 409.
-La sesión 03 está publicada en `47278b3`. La sesión 07 implementa esas respuestas
-mediante `POST /importaciones`.
+Son **453 pruebas** sobre ese commit. La documentación de la sesión 10 queda
+pendiente de revisión, publicación manual y CI de su propio commit para el
+cierre definitivo. No hay despliegue público, tag ni release. La versión de
+package.json sigue siendo `0.1.0`; V1 denomina el alcance funcional.
 
-La sesión 04 está publicada en `b1cb2e2` e incorpora un procesador CSV independiente de HTTP y persistencia.
-Valida los bytes originales, normaliza productos, detecta SKU duplicados dentro
-del archivo y devuelve errores por fila y campo, sin productos parcialmente aceptados.
+## Capacidades
 
-La sesión 05 está publicada en `59dbc42` e incorpora PostgreSQL local, migración del esquema y persistencia
-transaccional de importaciones y productos, con consultas internas y pruebas reales.
+- CSV estricto UTF-8, normalización de SKU/nombres y precios exactos en céntimos.
+- Errores estructurados por fila/campo; duplicados internos y límites verificados.
+- Una transacción por importación: sin productos parcialmente aceptados.
+- Recuperación de archivos idénticos ya confirmados, incluso bajo concurrencia.
+- Conflictos de SKU rechazados sin upsert.
+- Consultas paginadas con totales y filtro de productos por importación.
 
-La sesión 06 está publicada en `f4b63e3` e incorpora un servicio que coordina validación, huella de bytes,
-creación transaccional, conflictos, reintentos y solicitudes concurrentes.
+| Método y ruta | Comportamiento |
+| --- | --- |
+| GET /health | 200 y `{"status":"ok"}`; comprueba HTTP, no la conexión SQL |
+| POST /importaciones | Multipart, un archivo en `archivo`; 201 al crear, 200 al recuperar los mismos bytes, 409 por SKU existentes en otro archivo |
+| GET /productos | Lista por SKU, limit/offset y filtro opcional importacion_id |
+| GET /importaciones | Historial por fecha e ID descendentes, limit/offset |
+| GET /importaciones/:id | Metadatos y SHA-256; 404 si el UUID válido no existe |
 
-La sesión 07 está publicada en `96a9ae0` y añade `POST /importaciones`: recepción multipart, límites de bytes,
-validación, persistencia e idempotencia con las respuestas aprobadas.
-La sesión 08 está publicada en `cb4e48c` y añade `GET /productos`,
-`GET /importaciones` y su detalle por UUID,
-con paginación y consultas de solo lectura. `GET /health` conserva su comportamiento.
-La sesión 09, publicada en `61eff54`, prepara la candidata V1: aceptación
-del servidor compilado, corrección de indisponibilidad PostgreSQL y CI.
-La primera CI falló por la expansión del glob de exclusión de pruebas.
-La sesión 09.1 corrige test y test:watch; las 453 pruebas pasan localmente.
-Falta publicar la corrección y comprobar una nueva ejecución remota.
-Consulta la [guía de validación V1](docs/VALIDACION_V1.md).
-No hay despliegue ni cierre definitivo de V1.
+Los errores distinguen estructura/solicitud (400), tamaño (413), tipo (415),
+datos (422) y fallos técnicos (500/503). Un 503 de COMMIT incierto no demuestra
+ausencia de escrituras: se reintentan los mismos bytes para recuperar evidencia.
 
-## Tecnologías y requisitos
+## Tecnologías y arquitectura
 
-- Node.js 24 LTS, versión 24.13.0 o superior dentro de la rama 24.
-- npm (comprobación inicial con 11.6.2).
-- TypeScript y Express; multiparty para recepción y content-type para cabeceras MIME.
-- Vitest y Supertest para pruebas; tsx para ejecutar TypeScript en desarrollo.
-- Git y GitHub para control de versiones.
-- PostgreSQL 18 y driver pg para persistencia; no se requieren para `/health` ni `npm test`.
-- Docker es opcional. Apache, PHP y MySQL no participan en esta API.
+Node.js 24 (>=24.13.0 y <25), TypeScript estricto con NodeNext, Express,
+PostgreSQL 18 y pg. Multiparty recibe el archivo y content-type valida MIME.
+Vitest/Supertest prueban el comportamiento; tsx ejecuta el código en desarrollo.
+Versiones resueltas en package-lock.json. GitHub Actions ejecuta CI en Linux.
 
-Las versiones exactas de las dependencias quedan fijadas en `package-lock.json`.
+~~~mermaid
+flowchart LR
+  H["HTTP / Express"] --> S["ImportService"]
+  S --> C["Procesador CSV"]
+  S --> R["ImportRepository / pg"]
+  H -->|Consultas| R
+  R --> P[("PostgreSQL")]
+~~~
 
-## Instalación
+`src/http/` recibe/valida solicitudes y traduce respuestas;
+`src/csv/` procesa bytes sin I/O; `src/imports/` coordina huellas y resultados;
+`src/persistence/` encapsula SQL parametrizado y transacciones.
+`src/server.ts` compone un pool compartido y gestiona arranque/cierre.
+`migrations/` contiene el esquema versionado. No se utiliza ORM.
 
-Abre esta carpeta como proyecto independiente en VS Code y ejecuta:
+## Instalación y configuración
 
-```powershell
+Trabaja en una carpeta independiente con Node.js 24 y npm:
+
+~~~sh
 npm ci
-```
+~~~
 
-Para preparar la instancia PostgreSQL local desde una copia nueva, consulta
-[PERSISTENCIA](docs/PERSISTENCIA.md). Su inicializador genera `.env` sin sobrescribir
-archivos existentes. En la máquina de esta sesión ya está preparado.
+Prepara dos bases PostgreSQL 18 UTF-8 propias: desarrollo y
+`importacion_validacion_datos_test`. Sigue [PERSISTENCIA](docs/PERSISTENCIA.md)
+para Windows o [VALIDACION_V1](docs/VALIDACION_V1.md#configuración-y-migraciones)
+para otra instancia/Linux.
 
-Si configuras otra instancia propia y todavía no existe `.env`, puedes crear
-la configuración de ejemplo:
+Si todavía no existe `.env`, copia `.env.example` con `Copy-Item` en
+PowerShell o `cp -n` en Linux y completa las credenciales en tu editor.
+El inicializador Windows genera su propio .env: no lo crees antes de Initialize.
 
-```powershell
-Copy-Item .env.example .env
-```
+- DATABASE_URL identifica desarrollo.
+- TEST_DATABASE_URL identifica exclusivamente la base de integración.
+- PORT es opcional, por defecto 3000.
+- .env y .local están excluidos de Git; no publiques credenciales.
+- Las variables del proceso prevalecen sobre .env.
 
-`.env` está excluido de Git. `PORT` conserva el valor predeterminado `3000`
-y rango 1..65535. `DATABASE_URL` configura la persistencia y
-`TEST_DATABASE_URL` identifica la base exclusiva de pruebas.
-Los scripts correspondientes leen `.env`; las variables del proceso tienen
-prioridad. No copies credenciales reales a archivos versionados.
+En la máquina del proyecto PostgreSQL ya está instalado. Comprueba
+`npm run db:local -- -Action Status` y usa Start si está detenido.
+**No repitas Initialize sobre el cluster existente.**
+El script db:local es específico de Windows; no se necesita XAMPP ni MySQL.
+Docker solo se usa como servicio del runner de CI, no es obligatorio localmente.
 
-## Ejecutar la API
+Con tu base de desarrollo configurada:
 
-```powershell
+~~~sh
+npm run db:migrate
 npm run dev
-```
+~~~
 
-El proceso se reinicia al cambiar el código. Para detenerlo, pulsa `Ctrl+C`.
+La migración se reaplica sin duplicar el esquema y no se ejecuta al arrancar
+la API. El servidor escucha únicamente en `127.0.0.1`. Detenlo con Ctrl+C.
+Sin DATABASE_URL, health funciona; las operaciones que necesitan persistencia
+responden 503. Para ejecutar compilado:
 
-En otra terminal:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:3000/health
-```
-
-Respuesta HTTP 200, con Content-Type JSON:
-
-```json
-{ "status": "ok" }
-```
-
-Este endpoint confirma que el proceso HTTP responde; no comprueba
-conexión con una base de datos. El servidor escucha únicamente en
-`127.0.0.1` para trabajar en local. Si el puerto está ocupado, cambia `PORT`.
-
-Para compilar y ejecutar JavaScript:
-
-```powershell
+~~~sh
 npm run build
 npm start
-```
-
-## Importar productos mediante HTTP
-
-Configura `DATABASE_URL` en el entorno local, comprueba la instancia PostgreSQL
-existente con `npm run db:local -- -Action Status` y aplica `npm run db:migrate`
-si corresponde. El arranque de la API no crea ni modifica tablas automáticamente.
-
-Con un archivo UTF-8 que respete la cabecera `sku,nombre,precio_eur,stock`:
-
-~~~powershell
-curl.exe -i -F "archivo=@productos.csv;type=text/csv" http://127.0.0.1:3000/importaciones
 ~~~
 
-Una nueva importación confirmada devuelve 201. Reenviar exactamente los mismos
-bytes devuelve 200 con el identificador y cantidad originales. Otro archivo con
-SKU existentes devuelve 409 sin inserciones parciales.
+## Ejemplo de uso
 
-Consulta [HTTP_IMPORTACIONES](docs/HTTP_IMPORTACIONES.md) para ejemplos, errores,
-límites, mecanismo multipart y ciclo de vida del servidor. Sin `DATABASE_URL`,
-health sigue operativo; un CSV válido recibe 503 y uno inválido conserva su
-error de validación. Con URL configurada pero PostgreSQL no disponible, el servicio
-devuelve el error técnico correspondiente.
+Guarda `productos.csv` en UTF-8:
 
-## Consultar productos e importaciones
-
-~~~powershell
-curl.exe -i "http://127.0.0.1:3000/productos?limit=20&offset=0"
-curl.exe -i "http://127.0.0.1:3000/importaciones?limit=20&offset=0"
-# Sustituye este UUID por uno obtenido del listado o de una importación:
-curl.exe -i "http://127.0.0.1:3000/importaciones/a2c10e86-a049-4d16-8f92-9023b3f44001"
+~~~csv
+sku,nombre,precio_eur,stock
+DEMO-V1,Café,0.29,2
 ~~~
 
-Los listados devuelven la lista y `paginacion` con limit, offset y total.
-limit es 20 por defecto, entre 1 y 100; offset parte de 0.
-Productos se ordenan por SKU y admiten filtro `importacion_id`.
-Importaciones se ordenan por fecha e ID descendentes; el detalle incluye SHA-256.
-Los precios se devuelven en céntimos enteros y las fechas en UTC.
+Con la API activa, en otra terminal:
 
-Parámetros inválidos devuelven 400; un detalle inexistente, 404 NOT_FOUND.
-Una página vacía conserva su total real. Consultas sin persistencia disponible
-responden 503; health permanece operativo.
-Consulta [HTTP_CONSULTAS](docs/HTTP_CONSULTAS.md) para las reglas completas,
-formatos, errores y límites de paginación entre peticiones concurrentes.
+~~~sh
+curl -i http://127.0.0.1:3000/health
+curl -i -F "archivo=@productos.csv;type=text/csv" http://127.0.0.1:3000/importaciones
+curl -i "http://127.0.0.1:3000/productos?limit=20&offset=0"
+curl -i "http://127.0.0.1:3000/importaciones?limit=20&offset=0"
+~~~
 
-## Procesador CSV
+En Windows PowerShell usa `curl.exe`. El ejemplo inserta un producto en la
+base configurada si ese SKU no existe. Respuesta 201, con UUID ilustrativo:
 
-La función `processProductsCsv(content: Uint8Array)`, en
-`src/csv/process-products-csv.ts`, admite también `Buffer`. Recibe los bytes
-originales para comprobar UTF-8 y tamaño; no modifica la entrada ni realiza I/O.
-
-Ejemplo desde un archivo TypeScript en la raíz del proyecto:
-
-```typescript
-import { processProductsCsv } from './src/csv/process-products-csv.js';
-
-const resultado = processProductsCsv(Buffer.from(
-  'sku,nombre,precio_eur,stock\n ab-01 ,Café molido,12.50,10',
-  'utf8',
-));
-
-if (resultado.ok) {
-  console.log(resultado.productos);
-  // [{ sku: 'AB-01', nombre: 'Café molido', precio_centimos: 1250, stock: 10 }]
-} else {
-  console.log(resultado.error);
+~~~json
+{
+  "importacion_id": "23b6697c-108d-443a-92c4-18681f7a2eed",
+  "estado": "completada",
+  "productos_importados": 1
 }
-```
+~~~
 
-El resultado es una unión tipada:
+Reenviar exactamente los mismos bytes devuelve 200 con ese mismo resultado.
+El producto consultado conserva `precio_centimos: 29` y `stock: 2`.
+Para obtener detalle o filtrar, sustituye el UUID recibido en
+`/importaciones/<UUID>` o `/productos?importacion_id=<UUID>`.
+Los [ejemplos de consulta](docs/HTTP_CONSULTAS.md) y
+[errores de importación](docs/HTTP_IMPORTACIONES.md) detallan los cuerpos JSON.
 
-- `ok: true`: `productos` con SKU, nombre, precio en céntimos enteros y stock.
-- `ok: false`: `error` con código, mensaje, detalles por fila/campo e indicador
-  `errores_truncados`; nunca incluye productos.
+## Comprobaciones automatizadas
 
-Se comprueba toda la estructura antes de validar datos para conservar la
-prioridad contractual de errores. Se aplican límites inclusivos de 5 MiB de bytes
-originales, 10000 productos y 100 detalles de error devueltos.
-
-El parser está acotado al contrato: al prohibir campos multilínea, permite
-controlar las filas físicas directamente sin añadir dependencias.
-La normalización recorta únicamente espacios ASCII y tabuladores en extremos,
-convierte SKU ASCII a mayúsculas y nombres a NFC. Los precios se convierten a
-céntimos mediante dígitos enteros, sin redondeo ni aritmética decimal binaria.
-
-Dos llamadas con los mismos bytes vuelven a validarlos: este componente no
-registra importaciones ni aplica la idempotencia persistente D09/D10.
-Su éxito significa datos válidos en memoria, no una importación confirmada.
-
-## Persistencia PostgreSQL
-
-La capa de `src/persistence/` registra una importación y todos sus productos en
-una transacción y permite consultarlos por identificador, huella o SKU.
-Los errores revierten las escrituras; las restricciones SQL impiden SKU/huellas
-duplicados, referencias inexistentes y valores fuera de rango.
-
-El entorno autorizado usa PostgreSQL 18.6 en `127.0.0.1:55432`, sin servicio de
-Windows. Desarrollo y pruebas tienen bases distintas. Los binarios, datos,
-logs y credenciales locales están excluidos de Git.
-
-```powershell
-npm run db:local -- -Action Status
-# Si está detenido:
-npm run db:local -- -Action Start
-npm run db:migrate
-npm run build
-npm run test:integration
-# Para detenerlo al terminar de trabajar:
-npm run db:local -- -Action Stop
-```
-
-Consulta [el diseño y la preparación desde cero](docs/PERSISTENCIA.md) para las
-variables, tablas, migraciones y uso de `ImportRepository`.
-La sesión 05 añadió `pg` y `@types/pg`. La capa SQL se utiliza mediante
-`ImportService` para coordinar reintentos y conflictos; la ruta HTTP de la
-sesión 07 traduce sus resultados sin duplicar esas reglas.
-
-## Servicio de importación
-
-`ImportService`, en `src/imports/import-service.ts`, recibe los bytes originales
-y reutiliza el procesador CSV y `ImportRepository`. No depende de Express.
-
-```typescript
-import { ImportService } from './src/imports/import-service.js';
-import { ImportRepository } from './src/persistence/import-repository.js';
-import { createDatabasePool, requiredDatabaseUrl } from './src/persistence/database.js';
-
-const pool = createDatabasePool(requiredDatabaseUrl());
-try {
-  const service = new ImportService(new ImportRepository(pool));
-  const result = await service.importCsv(Buffer.from(
-    'sku,nombre,precio_eur,stock\nA-1,Café,0.29,2',
-  ));
-  console.log(result.kind);
-} finally {
-  await pool.end();
-}
-```
-
-El resultado distingue `created`, `existing`, `invalid`, `conflict` y
-`persistence_error`. Los dos éxitos contienen el mismo formato de
-`importacion`: identificador, estado completada y cantidad original.
-Un error técnico distingue `commit: not_confirmed` de `commit: unknown`;
-el segundo requiere reintentar los mismos bytes para resolver la incertidumbre.
-
-Solo bytes exactamente iguales recuperan una importación existente.
-Cambiar BOM, finales de línea, espacios u orden produce otra huella y puede
-generar conflictos de SKU. Los conflictos conservan filas originales, campo
-`sku` y el límite de 100 detalles. Un CSV inválido no accede a PostgreSQL.
-
-Las restricciones únicas coordinan las escrituras simultáneas. Tras rollback,
-la huella confirmada tiene prioridad sobre el conflicto de SKU. Los tiempos de
-espera son finitos y no hay bucles de reintento de escrituras.
-Consulta [PERSISTENCIA](docs/PERSISTENCIA.md) para las garantías y limitaciones.
-
-## Pruebas y comprobaciones
-
-```powershell
+~~~sh
 npm run typecheck
 npm test
 npm run build
 npm run test:integration
-```
+~~~
 
-`typecheck` comprueba los tipos de código y pruebas. `build` genera solo la
-aplicación en `dist/`. La prueba HTTP valida estado 200, Content-Type y cuerpo
-de `GET /health`; no necesita PostgreSQL ni un servidor iniciado.
-Las pruebas CSV cubren sintaxis, normalización, gramáticas y rangos, duplicados,
-localización y prioridad de errores, rechazo completo y límites.
-Los casos grandes se construyen en memoria.
+- npm test (equivalente a npm run test): 364 pruebas, sin PostgreSQL.
+- test:integration: 89 pruebas reales; exige su base exclusiva y build previo.
+- test:watch observa las pruebas normales. Su glob está entrecomillado para
+  evitar que Bash expanda nombres de archivo antes de llegar a Vitest.
+- La integración crea/elimina solo sus esquemas propios; falla si no está
+  configurada. Incluye el arranque y cierre del servidor compilado.
+- [ci.yml](.github/workflows/ci.yml) ejecuta instalación, tipos, pruebas, build,
+  migración/reaplicación e integración con PostgreSQL 18; push a main o manual.
 
-`npm test` ejecuta 364 pruebas sin PostgreSQL. Las 89 pruebas reales de
-persistencia, coordinación, HTTP y aceptación del servidor compilado se ejecutan
-con `npm run test:integration`, después de `npm run build`. Requieren la base
-exclusiva `importacion_validacion_datos_test` y no se omiten silenciosamente
-si falta configuración. Total: 453 casos.
+La [matriz de aceptación](docs/VALIDACION_V1.md#matriz-de-aceptación) relaciona
+criterios y suites. Los resultados remotos y locales se registran por separado
+en [STATUS](docs/STATUS.md); no se atribuyen a commits posteriores.
 
-La [matriz de aceptación y reproducción](docs/VALIDACION_V1.md) relaciona los
-criterios con sus suites. El [workflow de CI](.github/workflows/ci.yml) prepara
-estas comprobaciones en Linux con Node.js 24 y PostgreSQL 18. Su resultado
-remoto solo podrá verificarse tras el commit y push manuales.
+## Límites y exclusiones de V1
 
-Para ejecutar solo el procesador:
+CSV de hasta 5 MiB, 10000 productos, un archivo por solicitud y 100 detalles
+de error. Cuerpo multipart máximo: 5308416 bytes. UTF-8, coma, cabecera fija
+`sku,nombre,precio_eur,stock`, LF/CRLF y sin campos multilínea.
+Listados: limit 20 por defecto, máximo 100.
 
-```powershell
-npm test -- tests/csv-parser.test.ts tests/csv-products.test.ts tests/csv-limits.test.ts
-```
+No hay frontend, autenticación, edición/eliminación, integraciones externas ni
+despliegue público. No se certifica rendimiento a gran escala: no hay pruebas
+de carga. COMMIT incierto se prueba con fallos del driver, sin cortes físicos
+de red. OFFSET no garantiza una instantánea común entre distintas solicitudes.
+Estas exclusiones no son tareas obligatorias para cerrar el alcance aprobado.
 
-Para mantener Vitest observando cambios, usa `npm run test:watch`.
-Los resultados de la última ejecución están en [STATUS](docs/STATUS.md).
+## Documentación y mantenimiento
 
-## Estructura
+- [Evidencias V1](docs/EVIDENCIAS_V1.md): capacidades, decisiones, alternativas y CI.
+- [Validación V1](docs/VALIDACION_V1.md): reproducción, matriz y cierre formal.
+- [Contrato CSV](docs/CONTRATO_CSV.md): decisiones D01–D10 aprobadas.
+- [Persistencia](docs/PERSISTENCIA.md): esquema, configuración y concurrencia.
+- [Importaciones HTTP](docs/HTTP_IMPORTACIONES.md) y [consultas HTTP](docs/HTTP_CONSULTAS.md).
+- [Alcance](docs/PROJECT_BRIEF.md), [estado e historial](docs/STATUS.md) e
+  [instrucciones para Codex](AGENTS.md).
 
-```text
-src/
-  app.ts                 # Aplicación Express y rutas
-  server.ts              # Arranque del servidor local
-  http/
-    receive-csv.ts        # Multipart, cabeceras, límites y cierre de streams
-    import-route.ts       # Traducción de resultados a HTTP
-    read-parameters.ts    # Paginación, UUID y validación de parámetros
-    read-routes.ts        # Listados y detalle de solo lectura
-  csv/
-    process-products-csv.ts # Entrada pública: bytes y resultado tipado
-    parse-csv.ts          # Sintaxis, cabecera, filas y columnas
-    validate-products.ts  # Normalización, campos y duplicados internos
-    types.ts              # Tipos, límites y errores
-  imports/
-    import-service.ts     # Coordinación, huellas, conflictos y reintentos
-  persistence/
-    database.ts           # Pool, transacción y errores técnicos
-    import-repository.ts  # Inserciones y consultas parametrizadas
-    migrate.ts            # Historial y aplicación de SQL versionado
-    migrate-cli.ts        # Entrada del comando db:migrate
-migrations/
-  001_initial.sql         # Tablas, restricciones e índice de FK
-scripts/
-  local-postgres.ps1      # Preparación y ciclo de vida local en Windows
-tests/
-  health.test.ts         # Contrato HTTP de /health
-  csv-parser.test.ts     # Codificación y estructura CSV
-  csv-products.test.ts   # Validación y normalización
-  csv-limits.test.ts     # Límites, prioridad y rechazo completo
-  import-service.test.ts # Decisiones del servicio y errores técnicos
-  import-http.test.ts    # Contrato HTTP y límites
-  import-streams.test.ts # Interrupción, timeout y cierre de recepción
-  read-parameters.test.ts # Gramáticas y rangos de consulta
-  read-http.test.ts      # Respuestas, proyección y errores de lectura
-  integration/acceptance.test.ts # Servidor compilado, flujo completo y cierre
-  integration/read-http.test.ts # Paginación, confirmación y ausencia de escrituras
-  helpers/multipart.ts  # Solicitudes construidas en memoria
-  integration/import-http.test.ts # HTTP y PostgreSQL, carreras y rollback
-  integration/persistence.test.ts # Pruebas reales en base aislada
-  integration/import-service.test.ts # Carreras con conexiones independientes
-docs/
-  PROJECT_BRIEF.md        # Alcance y criterios de finalización
-  STATUS.md               # Estado real y siguiente paso
-  CONTRATO_CSV.md         # Contrato V1 aprobado
-  PERSISTENCIA.md         # Modelo, configuración y pruebas PostgreSQL
-  HTTP_IMPORTACIONES.md   # Uso de la ruta, respuestas y recepción multipart
-  HTTP_CONSULTAS.md       # Contrato de las consultas, paginación y ejemplos
-  VALIDACION_V1.md        # Matriz, reproducción y verificación pendiente de CI
-.github/workflows/ci.yml  # CI Linux, Node.js 24 y PostgreSQL 18
-AGENTS.md                 # Instrucciones operativas para Codex
-.env.example              # Configuración local de ejemplo
-package.json
-package-lock.json
-tsconfig.json
-tsconfig.build.json
-```
-
-## Desarrollo y seguimiento
-
-Consulta [el alcance](docs/PROJECT_BRIEF.md), [el estado](docs/STATUS.md) y
-[las instrucciones operativas](AGENTS.md) antes de continuar.
-
-Todos los commits y push los realiza exclusivamente el usuario desde GitHub
-Desktop. Codex deja los cambios locales para revisión y propone un Summary
-en castellano y una Description fiel al trabajo realizado; tiene prohibido
-ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
-no modifique expresamente esta norma.
-
-La sesión 09 está publicada en `61eff54`. La corrección de CI de la
-sesión 09.1 queda pendiente de revisión, commit y push manuales.
-
-Próximo paso: publicar manualmente y revisar la ejecución de GitHub Actions
-para ese commit. Solo después podrá registrarse el cierre de V1.
-Las pruebas de carga y de fallos físicos de red siguen pendientes.
+Todos los commits y push corresponden exclusivamente a Alex desde GitHub
+Desktop. Codex deja los cambios locales para revisión, sin staging ni publicación.

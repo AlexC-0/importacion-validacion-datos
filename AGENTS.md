@@ -7,12 +7,13 @@
 - Inspecciona primero la ruta, `git status --short --branch`, la rama y los remotos.
 - Trabaja exclusivamente dentro de este proyecto independiente. No modifiques
   archivos, historial ni remotos de otros proyectos.
-- La sesión 09 autoriza validación integral, pruebas de aceptación faltantes,
-  reproducción en copia aislada, documentación y preparación de GitHub Actions.
+- La sesión 10 autoriza revisión final del alcance y cierre documental con
+  evidencias técnicas; no autoriza nuevas funcionalidades ni infraestructura.
 - No añadas funcionalidades de producto. Corrige solo defectos demostrables de V1;
   conserva D01–D10, las garantías de importación y las migraciones publicadas.
-- La CI remota queda pendiente hasta el commit/push manual y la revisión de su
-  ejecución real. No declares V1 cerrada definitivamente antes de comprobarla.
+- La CI 43102797061 verificó 90b0066 con SUCCESS y 453 pruebas. No atribuyas
+  ese resultado a commits posteriores. El cierre definitivo requiere revisión,
+  publicación manual de la sesión 10 y comprobación de la CI de su propio commit.
 - Usa la instancia PostgreSQL existente, comprobando su estado antes de arrancarla;
   no reinstales PostgreSQL ni reinicialices el cluster.
 - Antes de instalar software o iniciar servicios nuevos, solicita autorización.
