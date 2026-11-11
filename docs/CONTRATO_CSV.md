@@ -19,9 +19,10 @@ el resultado existente; otro archivo con SKU existentes, `409 Conflict`.
 Las secciones 1–13 fijan el comportamiento aprobado y sus ejemplos de referencia.
 La sección 14 separa los aspectos internos de implementación aún pendientes.
 La aprobación del contrato no autoriza por sí sola implementar el importador.
-Tras la sesión 04 existen `GET /health`, su prueba y el procesamiento/validación
-de contenido CSV en memoria con pruebas propias. No hay recepción HTTP, tablas,
-transacciones ni endpoint de importación. Las reglas aprobadas no cambian.
+Estado de implementación: la sesión 04 incorporó validación CSV en memoria;
+la sesión 05 añade tablas PostgreSQL, persistencia transaccional y pruebas reales.
+No hay recepción HTTP ni servicio completo que coordine reintentos y conflictos.
+`GET /health` permanece igual. Las reglas aprobadas no cambian.
 
 ## 1. Codificación y delimitador aprobados — D01
 
@@ -369,8 +370,9 @@ se diseñarán posteriormente; no se incorporan nuevos endpoints en esta sesión
 ## 12. Ejemplos y casos para futuras pruebas
 
 Los siguientes casos expresan el contrato completo aprobado. Las pruebas de la
-sesión 04 cubren el contenido CSV y sus errores en memoria; resultados HTTP,
-persistencia, repetición y concurrencia siguen pendientes de implementación.
+sesión 04 cubren el contenido CSV y sus errores en memoria; la sesión 05
+añade pruebas de persistencia, restricciones y rollback. Los resultados HTTP,
+la recuperación de repeticiones y la coordinación concurrente siguen pendientes.
 
 ### Archivo válido
 
@@ -454,27 +456,28 @@ de D10 a recuperación de repeticiones exactas mediante HTTP 200.
 
 ## 14. Aspectos internos y trabajo posterior
 
-Las reglas anteriores ya no están pendientes de aprobación. Quedan por concretar
-al autorizar las próximas sesiones de implementación:
+Las reglas anteriores siguen aprobadas. Avance de implementación:
 
-- Recepción multipart y gestión de sus recursos. La sesión 04 incorpora un
-  parser acotado sin dependencias, organizado en `src/csv/`, y validación en
-  memoria, sin alterar gramáticas, límites ni errores aprobados.
-- Modelo y representación en PostgreSQL, migraciones y mecanismos de unicidad,
-  transacciones y coordinación concurrente que garanticen lo aprobado.
-- Formato definitivo de identificadores y forma de recuperar el resultado
-  confirmado y su versión contractual, conservando el mismo resultado en 201/200.
-- Rutas y contratos de consulta de productos e importaciones, fuera del alcance
-  de esta aprobación del endpoint de importación.
-- Evaluación futura de los límites con pruebas de carga. Los valores aprobados
-  siguen vigentes mientras no se acuerde y documente un cambio.
+- Sesión 04 publicada en `b1cb2e2`: parser acotado sin dependencias y validación
+  en memoria, organizados en `src/csv/`.
+- Sesión 05: modelo PostgreSQL, identificadores UUID, migración versionada,
+  restricciones de unicidad/FK/rangos, transacción y consultas internas.
+  El diseño y sus límites se documentan en [PERSISTENCIA](PERSISTENCIA.md).
 
-La sesión 03 consolidó y publicó el contrato en `47278b3`. La sesión 04
-implementa y prueba el procesamiento del contenido con autorización expresa;
-no completa las garantías persistentes de D05 y D08–D10 ni los límites multipart
-de D06. El éxito del procesador significa datos válidos en memoria, no una
-importación confirmada ni una respuesta HTTP 201.
+Quedan pendientes:
 
-Próximo paso recomendado: preparar PostgreSQL, el modelo de productos e
-importaciones y pruebas de persistencia en una sesión expresamente autorizada.
+- Recepción multipart, gestión de sus recursos y límites HTTP.
+- Servicio que coordine huella, conflictos y recuperación del resultado,
+  incluyendo carreras concurrentes y pérdida de respuesta tras commit.
+- Adaptación HTTP 200/201/409 y demás respuestas aprobadas.
+- Rutas y contratos de consulta HTTP de productos e importaciones.
+- Evaluación de límites con pruebas de carga, sin cambiar los valores aprobados.
+
+Una huella duplicada produce actualmente una infracción técnica de unicidad en
+la capa de persistencia. Eso no modifica D10: el futuro servicio deberá recuperar
+la importación confirmada y devolver 200. No debe traducir todo error de unicidad
+a 409. Las garantías de coordinación aún no se consideran implementadas ni probadas.
+
+Próximo paso recomendado: preparar ese servicio y sus pruebas de reintentos y
+concurrencia con autorización expresa, antes de conectar la recepción HTTP.
 Los commits y push siguen siendo manuales y exclusivos del usuario.

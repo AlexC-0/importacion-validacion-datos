@@ -31,7 +31,8 @@ multiusuario en la primera versión.
 
 Una importación inválida no debe dejar productos parcialmente guardados.
 V1 no almacena de forma persistente intentos fallidos, según D08.
-El modelo de datos y sus mecanismos internos se diseñarán posteriormente.
+El modelo de datos y la transacción inicial se implementan en la sesión 05;
+la coordinación funcional y concurrente se completará después.
 
 ## Sesión 01 — Completada
 
@@ -56,9 +57,9 @@ con 200 y recuperación del resultado existente, y otro archivo con SKU
 existentes con 409. Se alinearon ejemplos, códigos, concurrencia y casos límite
 sin implementar funcionalidades.
 
-## Sesión 04 — Procesamiento y validación CSV
+## Sesión 04 — Procesamiento y validación CSV, publicada
 
-La autorización de esta sesión incorpora un componente independiente que recibe
+Publicada en `b1cb2e2`. Esta sesión incorporó un componente independiente que recibe
 bytes originales y devuelve productos normalizados o errores estructurados.
 
 - Interpretación estricta de UTF-8, BOM, comillas, delimitador, cabecera y filas.
@@ -70,7 +71,20 @@ bytes originales y devuelve productos normalizados o errores estructurados.
 
 No incorpora recepción HTTP, multipart, persistencia, transacciones, conflictos
 contra catálogo, idempotencia persistente ni concurrencia.
-Los cambios quedan locales para revisión y publicación manual por el usuario.
+Alex confirmó y publicó esos cambios. La capa CSV permanece independiente.
+
+## Sesión 05 — PostgreSQL y persistencia transaccional
+
+- Instancia PostgreSQL local aislada autorizada por Alex, con bases separadas.
+- Modelo mínimo de importaciones y productos, migración SQL versionada y driver pg.
+- Inserción atómica de la importación y sus productos; rollback ante errores.
+- Restricciones de unicidad, referencias, normalización y rangos en SQL.
+- Consultas internas de comprobación y pruebas reales en esquemas propios.
+- Documentación del modelo y preparación en [PERSISTENCIA](PERSISTENCIA.md).
+
+No incorpora rutas, multipart, interfaz, autenticación, despliegue ni clasificación
+funcional de respuestas 200/201/409. Los cambios de esta sesión quedan locales
+para revisión y publicación manual por Alex.
 
 ## Exclusiones
 
@@ -90,10 +104,10 @@ normalización, validación, duplicados, atomicidad, huella de bytes originales,
 errores y respuestas HTTP. No quedan decisiones D01–D10 pendientes de aprobación.
 
 El parsing y la validación en memoria están implementados en `src/csv/`.
-Quedan por diseñar recepción multipart, persistencia y coordinación concurrente
-en PostgreSQL, formato de identificadores y consultas de productos e importaciones. Los límites aprobados de V1 se evaluarán
-con futuras pruebas de carga; esa evaluación no impide usarlos como referencia.
-No se añaden infraestructura ni tablas durante esta sesión.
+La sesión 05 añade persistencia con UUID, precios enteros, relaciones y consultas
+internas. Quedan recepción multipart, contratos de consulta HTTP y coordinación
+de reintentos/conflictos bajo concurrencia. Los límites aprobados de V1 se
+evaluarán con futuras pruebas de carga; no se modifican en esta sesión.
 
 ## Criterios de finalización de la primera versión
 
@@ -139,6 +153,17 @@ La documentación distingue implementación disponible y garantías futuras.
 No se modifican dependencias, rutas ni infraestructura; los cambios se dejan
 sin staging, commit ni push para revisión manual.
 
-Próxima sesión recomendada: preparar PostgreSQL, el modelo de productos e
-importaciones y sus pruebas antes de integrar persistencia y recepción HTTP.
-Requiere autorización específica de ese alcance.
+La sesión 04 ya está publicada. Sus comprobaciones históricas se conservan
+separadas de las ejecuciones de la sesión 05.
+
+## Criterios de cierre de la sesión 05
+
+Esquema reproducible desde cero, restricciones verificadas en PostgreSQL real,
+persistencia transaccional sin residuos al fallar una inserción y conexiones
+cerradas/liberadas correctamente. Las pruebas existentes, tipos y compilación
+deben seguir pasando. No considerar validada la persistencia si se omite la
+integración por falta de entorno.
+
+Próxima sesión recomendada: un servicio independiente de HTTP que coordine
+validación, huella, conflictos y persistencia, con pruebas de reintentos y
+concurrencia. La integración HTTP vendrá después. Requiere autorización expresa.

@@ -21,12 +21,15 @@ inserciones; otro archivo con SKU existentes devuelve 409.
 La sesión 03 está publicada en `47278b3`. Esas respuestas HTTP pertenecen a
 la futura importación persistida; todavía no existe `POST /importaciones`.
 
-La sesión 04 incorpora un procesador CSV independiente de HTTP y persistencia.
+La sesión 04 está publicada en `b1cb2e2` e incorpora un procesador CSV independiente de HTTP y persistencia.
 Valida los bytes originales, normaliza productos, detecta SKU duplicados dentro
 del archivo y devuelve errores por fila y campo, sin productos parcialmente aceptados.
 
-Quedan pendientes recepción multipart, PostgreSQL, transacciones, conflictos con
-productos guardados, idempotencia persistente, concurrencia y consultas.
+La sesión 05 incorpora PostgreSQL local, migración del esquema y persistencia
+transaccional de importaciones y productos, con consultas internas y pruebas reales.
+
+Quedan pendientes recepción multipart, nuevas rutas, clasificación funcional de
+conflictos/reintentos y coordinación de solicitudes concurrentes.
 La API sigue exponiendo únicamente `GET /health`. No hay despliegue.
 
 ## Tecnologías y requisitos
@@ -36,7 +39,7 @@ La API sigue exponiendo únicamente `GET /health`. No hay despliegue.
 - TypeScript y Express.
 - Vitest y Supertest para pruebas; tsx para ejecutar TypeScript en desarrollo.
 - Git y GitHub para control de versiones.
-- PostgreSQL previsto para sesiones posteriores; no es necesario para arrancar ahora.
+- PostgreSQL 18 y driver pg para persistencia; no se requieren para `/health` ni `npm test`.
 - Docker es opcional. Apache, PHP y MySQL no participan en esta API.
 
 Las versiones exactas de las dependencias quedan fijadas en `package-lock.json`.
@@ -49,16 +52,22 @@ Abre esta carpeta como proyecto independiente en VS Code y ejecuta:
 npm ci
 ```
 
-Opcionalmente, crea la configuración local:
+Para preparar la instancia PostgreSQL local desde una copia nueva, consulta
+[PERSISTENCIA](docs/PERSISTENCIA.md). Su inicializador genera `.env` sin sobrescribir
+archivos existentes. En la máquina de esta sesión ya está preparado.
+
+Si configuras otra instancia propia y todavía no existe `.env`, puedes crear
+la configuración de ejemplo:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-`.env` está excluido de Git. La única variable actual es `PORT`, con valor
-predeterminado `3000` y rango válido de 1 a 65535. Los scripts de arranque
-leen el archivo si existe; no es necesario crearlo. Las variables del proceso
-tienen prioridad sobre ese archivo.
+`.env` está excluido de Git. `PORT` conserva el valor predeterminado `3000`
+y rango 1..65535. `DATABASE_URL` configura la persistencia y
+`TEST_DATABASE_URL` identifica la base exclusiva de pruebas.
+Los scripts correspondientes leen `.env`; las variables del proceso tienen
+prioridad. No copies credenciales reales a archivos versionados.
 
 ## Ejecutar la API
 
@@ -135,6 +144,32 @@ Dos llamadas con los mismos bytes vuelven a validarlos: este componente no
 registra importaciones ni aplica la idempotencia persistente D09/D10.
 Su éxito significa datos válidos en memoria, no una importación confirmada.
 
+## Persistencia PostgreSQL
+
+La capa de `src/persistence/` registra una importación y todos sus productos en
+una transacción y permite consultarlos por identificador, huella o SKU.
+Los errores revierten las escrituras; las restricciones SQL impiden SKU/huellas
+duplicados, referencias inexistentes y valores fuera de rango.
+
+El entorno autorizado usa PostgreSQL 18.6 en `127.0.0.1:55432`, sin servicio de
+Windows. Desarrollo y pruebas tienen bases distintas. Los binarios, datos,
+logs y credenciales locales están excluidos de Git.
+
+```powershell
+npm run db:local -- -Action Status
+# Si está detenido:
+npm run db:local -- -Action Start
+npm run db:migrate
+npm run test:integration
+# Para detenerlo al terminar de trabajar:
+npm run db:local -- -Action Stop
+```
+
+Consulta [el diseño y la preparación desde cero](docs/PERSISTENCIA.md) para las
+variables, tablas, migraciones y uso de `ImportRepository`.
+El driver `pg` y `@types/pg` son las únicas dependencias añadidas.
+La capa aún no decide respuestas HTTP 200/201/409 ni coordina reintentos.
+
 ## Pruebas y comprobaciones
 
 ```powershell
@@ -149,6 +184,11 @@ de `GET /health`; no necesita PostgreSQL ni un servidor iniciado.
 Las pruebas CSV cubren sintaxis, normalización, gramáticas y rangos, duplicados,
 localización y prioridad de errores, rechazo completo y límites.
 Los casos grandes se construyen en memoria.
+
+`npm test` ejecuta las 190 pruebas existentes sin PostgreSQL. Las 45 pruebas
+reales de persistencia se ejecutan por separado con `npm run test:integration`;
+requieren la base exclusiva `importacion_validacion_datos_test` y no se omiten
+silenciosamente si falta configuración.
 
 Para ejecutar solo el procesador:
 
@@ -170,15 +210,26 @@ src/
     parse-csv.ts          # Sintaxis, cabecera, filas y columnas
     validate-products.ts  # Normalización, campos y duplicados internos
     types.ts              # Tipos, límites y errores
+  persistence/
+    database.ts           # Pool, transacción y errores técnicos
+    import-repository.ts  # Inserciones y consultas parametrizadas
+    migrate.ts            # Historial y aplicación de SQL versionado
+    migrate-cli.ts        # Entrada del comando db:migrate
+migrations/
+  001_initial.sql         # Tablas, restricciones e índice de FK
+scripts/
+  local-postgres.ps1      # Preparación y ciclo de vida local en Windows
 tests/
   health.test.ts         # Contrato HTTP de /health
   csv-parser.test.ts     # Codificación y estructura CSV
   csv-products.test.ts   # Validación y normalización
   csv-limits.test.ts     # Límites, prioridad y rechazo completo
+  integration/persistence.test.ts # Pruebas reales en base aislada
 docs/
   PROJECT_BRIEF.md        # Alcance y criterios de finalización
   STATUS.md               # Estado real y siguiente paso
   CONTRATO_CSV.md         # Contrato V1 aprobado; implementación parcial
+  PERSISTENCIA.md         # Modelo, configuración y pruebas PostgreSQL
 AGENTS.md                 # Instrucciones operativas para Codex
 .env.example              # Configuración local de ejemplo
 package.json
@@ -198,10 +249,9 @@ en castellano y una Description fiel al trabajo realizado; tiene prohibido
 ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
 no modifique expresamente esta norma.
 
-Las sesiones 02 y 03 ya están publicadas. La implementación de la sesión 04
-queda local, pendiente de revisión, commit y push manuales.
+Las sesiones 02, 03 y 04 ya están publicadas. La sesión 05 queda local,
+pendiente de revisión, commit y push manuales.
 
-Próximo paso recomendado: preparar PostgreSQL, el modelo de productos e
-importaciones y pruebas de persistencia, con un alcance expresamente autorizado.
-La integración HTTP se realizará cuando pueda respetar las garantías de
-importación confirmada del contrato.
+Próximo paso recomendado: implementar el servicio que coordine validación,
+huella, conflictos y persistencia, con pruebas de reintentos y concurrencia.
+La recepción HTTP se integrará posteriormente respetando las respuestas del contrato.

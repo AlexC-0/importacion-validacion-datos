@@ -12,9 +12,11 @@ Fecha de actualización: 11 de noviembre de 2026.
   `52bc5c1` (`52bc5c1ac5b37048af551620d2e1d34806f53f2e`).
 - Sesión 03 publicada: `47278b3`
   (`47278b314f0b12ae523b4941af23d4a87122b7db`), con el contrato aprobado.
-- Al iniciar la sesión 04, `main` local y GitHub coincidían en `47278b3` y el
-  directorio de trabajo estaba limpio. La implementación de esta sesión queda
-  local, pendiente de revisión, commit y push manuales.
+- Sesión 04 publicada por Alex: `b1cb2e2`
+  (`b1cb2e2a586ca29aebd8f25bc60e1aa3c14c5e08`).
+- Al iniciar la sesión 05, `main` local y GitHub coincidían en `b1cb2e2` y
+  el directorio de trabajo estaba limpio. Esta entrega queda local para revisión,
+  commit y push manuales.
 - Versión del proyecto en `package.json`: `0.1.0`.
 - La API no está desplegada. Publicar código en GitHub no inicia un servicio.
 
@@ -129,7 +131,7 @@ Durante la sesión 03 no se instalaron dependencias ni se ejecutaron de nuevo
 pruebas funcionales o compilación: solo hubo cambios documentales.
 No se desplegó la API.
 
-## Sesión 04 — Procesamiento y validación CSV implementados
+## Sesión 04 — Procesamiento y validación CSV publicados
 
 Entrada pública: `processProductsCsv(content: Uint8Array)`, compatible con
 `Buffer`, en `src/csv/process-products-csv.ts`. Devuelve productos normalizados
@@ -158,7 +160,7 @@ La API y su arranque no cambian. No se implementan rutas nuevas, recepción
 multipart, infraestructura, base de datos, transacciones, conflictos contra
 catálogo, huellas persistidas, coordinación concurrente ni consultas.
 
-### Comprobaciones ejecutadas en la sesión 04
+### Comprobaciones históricas ejecutadas en la sesión 04
 
 Entorno usado: Node.js 24.13.0, npm 11.6.2, Git 2.56.0.windows.4 y PowerShell 5.1.
 Las dependencias existentes estaban instaladas; no se añadieron ni reinstalaron.
@@ -180,7 +182,7 @@ corrigió. La ejecución final de las tres comprobaciones es correcta.
 No se presentan las pruebas históricas de arranque o instalación como ejecutadas
 de nuevo. Las pruebas de límites no equivalen a pruebas de carga en producción.
 
-### Entrega local de la sesión 04
+### Entrega y publicación de la sesión 04
 
 - Rama `main`, HEAD publicado de partida `47278b3`, sin nuevos commits.
 - Cinco documentos actualizados: AGENTS, README, PROJECT_BRIEF, STATUS y notas
@@ -191,23 +193,103 @@ de nuevo. Las pruebas de límites no equivalen a pruebas de carga en producción
 - Revisión final de diff, enlaces, ejemplos, exclusiones y alcance registrada
   en el informe de entrega.
 
-Alex debe revisar los cambios y realizar manualmente el commit y el push desde
-GitHub Desktop. La sesión 04 no está publicada todavía.
+Alex revisó y publicó la sesión 04 en `b1cb2e2` desde GitHub Desktop.
+La lista anterior describe su entrega local histórica antes de esa publicación.
+
+## Sesión 05 — PostgreSQL y primera persistencia
+
+### Inspección inicial y autorización
+
+No se encontró PostgreSQL, psql, proceso, servicio ni configuración de conexión
+de este proyecto. Docker 29.9.3 estaba instalado, con motor detenido; WSL no podía
+arrancar. No se alteraron esos componentes ni MySQL/Apache de XAMPP.
+
+Alex autorizó expresamente descargar PostgreSQL, prepararlo en `.local/`,
+iniciarlo solo en `127.0.0.1:55432` y crear bases independientes de desarrollo
+y pruebas, sin instalar un servicio de Windows.
+
+### Entorno operativo comprobado
+
+- PostgreSQL y psql 18.6, binarios oficiales de EDB para Windows x64.
+- Cluster UTF-8 con locale C, datos en `.local/data`.
+- Base de desarrollo `importacion_validacion_datos`.
+- Base exclusiva de pruebas `importacion_validacion_datos_test`.
+- Rol `csv_app`, propietario de ambas bases, sin superusuario, CREATEDB ni CREATEROLE.
+- Contraseñas aleatorias y autenticación SCRAM-SHA-256; credenciales locales
+  excluidas de Git en `.env` y `.local/admin.pgpass`.
+- Escucha verificada exclusivamente en `127.0.0.1:55432`.
+- Parada, arranque y consulta de estado comprobados mediante `db:local`.
+- La instancia queda arrancada al entregar; no arranca automáticamente con Windows.
+- Desarrollo conserva cero importaciones y cero productos; la suite no lo utiliza.
+- Tras las pruebas quedan cero esquemas temporales `csv_test_*`.
+
+### Implementación
+
+- `migrations/001_initial.sql`: importaciones, productos, claves, unicidad de
+  huella/SKU, normalización, rangos y relación restrictiva.
+- `src/persistence/database.ts`: pool, errores técnicos sin datos sensibles
+  y transacción con liberación de cliente; descarte si falla el rollback.
+- `import-repository.ts`: inserción transaccional y consultas por identificador,
+  huella, SKU e importación. Recibe productos ya validados.
+- `migrate.ts` y `migrate-cli.ts`: SQL versionado, historial/checksum y ejecución
+  desde el proyecto, también con JavaScript compilado.
+- `scripts/local-postgres.ps1`: preparación, arranque, parada y estado de la
+  instancia local autorizada, sin sobrescribir instancias o configuraciones.
+- `tests/integration/persistence.test.ts`: pruebas reales en esquemas nuevos
+  de la base exclusiva, sin limpiar datos de procedencia desconocida.
+- Nuevas dependencias mínimas: `pg@8.23.1` y `@types/pg@8.23.1`.
+  Instalación correcta; npm informó de cero vulnerabilidades.
+
+El modelo, decisiones y reproducción se documentan en
+[PERSISTENCIA](PERSISTENCIA.md). Se conservan las reglas aprobadas del contrato.
+No hay ORM, nuevas rutas, multipart, autenticación, despliegue ni colas.
+
+### Comprobaciones ejecutadas en la sesión 05
+
+| Comprobación | Resultado final |
+| --- | --- |
+| `npm run typecheck` | Correcto, incluido el código de integración |
+| `npm test` | 190 pruebas correctas en 4 archivos; CSV y GET /health |
+| `npm run build` | Correcto |
+| `npm run test:integration` | 45 pruebas reales correctas en PostgreSQL 18.6 |
+| `npm run db:migrate` | Creación desde cero y reaplicación sin cambios correctas |
+| Ejecutor compilado de migraciones | Correcto tras reiniciar PostgreSQL |
+| Inicialización repetida | Rechazada como se esperaba; datos y .env preservados |
+| Conexiones | Liberación tras error/éxito y cierre real comprobados |
+| Aislamiento | Base exclusiva, esquemas propios limpiados y desarrollo sin filas |
+
+Las 235 pruebas se ejecutaron, sin omisiones. La suite de integración comprobó
+migración inicial, historial alterado, esquema ajeno, céntimos exactos, Unicode,
+relaciones, unicidad, NOT NULL, CHECK, consultas parametrizadas, rollback completo
+y reutilización/cierre de conexiones. Se corrigió una expectativa inicial:
+ON DELETE RESTRICT devuelve 23001 en PostgreSQL 18, distinto del 23503 de una FK
+inexistente. La protección de datos funcionó en ambos casos.
+
+Las pruebas no equivalen a pruebas de carga ni validan aún la clasificación
+funcional bajo concurrencia o la pérdida de respuesta después de COMMIT.
+
+### Estado de la entrega
+
+Rama `main`, HEAD `b1cb2e2`, mismo remoto del proyecto.
+Cambios locales sin staging, commit ni push. La sesión 05 no está publicada.
+Código CSV, aplicación Express, arranque HTTP y pruebas previas conservados.
+
+Binarios, ZIP, datos, logs, credenciales, dependencias instaladas y salida dist
+quedan excluidos de Git. No se modifican otros repositorios ni servicios.
+La revisión final del diff, documentación y exclusiones se registra en el
+informe de entrega. No hay bloqueos de entorno pendientes.
 
 ## Pendiente y próximo paso
 
-D01–D10 siguen aprobadas. El procesamiento en memoria cubre las reglas de
-contenido de D01–D04, duplicados internos de D05, límites CSV de D06 y errores
-locales de D07. El rechazo completo no sustituye la futura atomicidad en la base
-de datos: faltan las garantías persistentes de D05 y D08–D10.
+La capa de persistencia aporta atomicidad e integridad relacional verificadas,
+pero todavía no constituye el servicio completo de importación.
+Ante una huella duplicada devuelve un error técnico de unicidad; el futuro
+servicio deberá recuperar la importación existente conforme a D09/D10.
 
-Próxima sesión técnica recomendada: preparar PostgreSQL, diseñar el modelo de
-productos/importaciones y añadir pruebas de persistencia, con alcance
-expresamente autorizado. Deben concretarse migraciones, identificadores y
-restricciones de unicidad de SKU y huella para sustentar posteriormente
-transacciones, rollback e idempotencia segura ante concurrencia.
+Sesión 06 recomendada: desarrollar un servicio independiente de HTTP que coordine
+validación CSV, SHA-256 de bytes originales, reintentos, conflictos y persistencia,
+con pruebas reales de concurrencia. No traducir todo error de unicidad a 409.
+Posteriormente integrar multipart y respuestas HTTP 200/201/409, consultas
+públicas y límites de recepción. Todo ello requiere autorización del alcance.
 
-La recepción multipart, su límite de cuerpo HTTP, `POST /importaciones` y las
-consultas se abordarán después. El éxito en memoria no es un 201 ni una
-importación confirmada. La confirmación y publicación de esta entrega quedan
-pendientes de intervención manual.
+Alex realizará la revisión, el commit y el push manuales desde GitHub Desktop.

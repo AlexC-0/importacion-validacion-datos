@@ -7,10 +7,16 @@
 - Inspecciona primero la ruta, `git status --short --branch`, la rama y los remotos.
 - Trabaja exclusivamente dentro de este proyecto independiente. No modifiques
   archivos, historial ni remotos de otros proyectos.
-- Respeta la sesión y el alcance autorizados. La sesión 04 autoriza expresamente
-  un procesador CSV independiente de HTTP y persistencia, su validación y pruebas.
-  No añadas rutas, recepción multipart, PostgreSQL, transacciones, comprobación
-  de productos persistidos, idempotencia persistente ni coordinación concurrente.
+- La sesión 05 autoriza PostgreSQL, modelo relacional, migraciones, persistencia
+  transaccional y pruebas de integración, independientes de HTTP.
+- No añadas rutas ni multipart, ni anticipes la clasificación funcional de
+  reintentos o las respuestas 200/201/409. Conserva las garantías del contrato.
+- Antes de instalar software o iniciar servicios nuevos, solicita autorización.
+  Alex autorizó PostgreSQL local aislado en `.local/`, con acceso únicamente
+  por `127.0.0.1:55432`, bases de desarrollo y pruebas separadas y sin servicio
+  de Windows. No alteres Docker, WSL ni XAMPP como parte de esta preparación.
+- Las pruebas de integración usan una base exclusiva terminada en `_test` y
+  esquemas nuevos propios; nunca limpies datos o esquemas de procedencia desconocida.
 - Conserva las reglas de `docs/CONTRATO_CSV.md`. Si surge una incompatibilidad,
   informa antes de cambiar el comportamiento aprobado.
 - D01–D10 están aprobadas en `docs/CONTRATO_CSV.md`: una creación confirmada
