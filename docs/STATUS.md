@@ -10,9 +10,11 @@ Fecha de actualización: 11 de noviembre de 2026.
   (`852e829b979b6c8e55e3227b28b61f21f6b7b074`).
 - Sesión 02 publicada: commit documental `cb89a65`, integrado en `main` con
   `52bc5c1` (`52bc5c1ac5b37048af551620d2e1d34806f53f2e`).
-- Al iniciar la sesión 03, `main` local y GitHub coincidían en `52bc5c1` y el
-  directorio de trabajo estaba limpio. El merge conservó los cinco documentos
-  e incorporó un ajuste del texto introductorio del README.
+- Sesión 03 publicada: `47278b3`
+  (`47278b314f0b12ae523b4941af23d4a87122b7db`), con el contrato aprobado.
+- Al iniciar la sesión 04, `main` local y GitHub coincidían en `47278b3` y el
+  directorio de trabajo estaba limpio. La implementación de esta sesión queda
+  local, pendiente de revisión, commit y push manuales.
 - Versión del proyecto en `package.json`: `0.1.0`.
 - La API no está desplegada. Publicar código en GitHub no inicia un servicio.
 
@@ -51,7 +53,7 @@ Las versiones resueltas están fijadas en `package-lock.json`.
 
 Estos resultados son históricos; no se presentan como nuevas ejecuciones en
 las sesiones 02 o 03. Los procesos temporales de las comprobaciones se detuvieron.
-Solo la prueba de `/health` está guardada en la suite actual.
+En aquel momento la suite guardada contenía solo la prueba de `/health`.
 
 ## Sesión 02 — Documentación completada y publicada
 
@@ -74,7 +76,7 @@ El código, la configuración y las dependencias no cambiaron.
 Estos resultados corresponden a la propuesta de la sesión 02, anterior al ajuste
 de D10. La aprobación y las nuevas comprobaciones se registran a continuación.
 
-## Sesión 03 — Contrato CSV V1 aprobado y consolidación documental
+## Sesión 03 — Contrato CSV V1 aprobado y publicado
 
 Alex Cobián aprobó D01–D10 el 11 de noviembre de 2026, con esta modificación de D10:
 
@@ -97,14 +99,13 @@ Se separan expresamente las reglas aprobadas de los aspectos internos pendientes
 en la sección 14 del contrato. La aprobación no autoriza por sí sola implementar
 el importador. La sesión 03 únicamente modifica los cinco documentos existentes.
 
-### Estado de la entrega y comprobaciones de la sesión 03
+### Publicación y comprobaciones históricas de la sesión 03
 
-Los cambios documentales quedan locales y pendientes de revisión, commit y push
-manuales desde GitHub Desktop. No se realiza staging ni se crean nuevas ramas.
-HEAD se conserva en `52bc5c1`; el índice está vacío y todos los archivos
-versionados ajenos a la documentación permanecen intactos.
+La sesión 03 dejó cinco documentos para revisión y publicación manual por Alex,
+sin staging ni cambios de rama. Después, el usuario publicó `47278b3`, cuya
+presencia en `main` local y GitHub se comprobó al iniciar la sesión 04.
 
-Comprobaciones ejecutadas en esta sesión:
+Comprobaciones históricas ejecutadas en la entrega documental de la sesión 03:
 
 - Inspección de ruta, rama, remoto y estado inicial limpio; `main` local y GitHub
   coincidían en `52bc5c1`.
@@ -124,22 +125,89 @@ Comprobaciones ejecutadas en esta sesión:
 Estas comprobaciones validan la referencia documental; no demuestran una
 implementación de la importación ni son pruebas funcionales de la API.
 
-No se instalan dependencias ni se ejecutan de nuevo pruebas funcionales o
-compilación: no hay cambios de código. No se despliega la API.
+Durante la sesión 03 no se instalaron dependencias ni se ejecutaron de nuevo
+pruebas funcionales o compilación: solo hubo cambios documentales.
+No se desplegó la API.
+
+## Sesión 04 — Procesamiento y validación CSV implementados
+
+Entrada pública: `processProductsCsv(content: Uint8Array)`, compatible con
+`Buffer`, en `src/csv/process-products-csv.ts`. Devuelve productos normalizados
+o errores estructurados; no devuelve productos parciales cuando falla.
+
+Implementado:
+
+- UTF-8 estricto, un BOM inicial opcional, LF/CRLF, comas, comillas y escape doble.
+- Cabecera exacta, cuatro columnas y rechazo de líneas vacías, CR aislado,
+  comillas inválidas y campos multilínea.
+- Recorte exclusivo de espacios ASCII/tabuladores en extremos; SKU ASCII en
+  mayúsculas y nombres NFC medidos en puntos de código.
+- Gramáticas y rangos de precio/stock, conversión exacta a céntimos enteros.
+- Duplicados internos con referencia a la primera fila y rechazo del archivo.
+- Límites inclusivos de 5242880 bytes originales y 10000 productos.
+- Errores ordenados por fila/columna; hasta 100 detalles e indicador de truncamiento
+  únicamente cuando se encuentran más. Los errores estructurales tienen prioridad.
+- Pruebas construidas en memoria, incluidos los extremos de tamaño y filas.
+
+Se eligió un parser acotado al contrato, sin añadir dependencias. Se separan
+interpretación, validación y tipos en cuatro módulos de `src/csv/`.
+El recorte recorre los extremos del valor sin búsquedas repetidas sobre
+secuencias largas de espacios interiores.
+
+La API y su arranque no cambian. No se implementan rutas nuevas, recepción
+multipart, infraestructura, base de datos, transacciones, conflictos contra
+catálogo, huellas persistidas, coordinación concurrente ni consultas.
+
+### Comprobaciones ejecutadas en la sesión 04
+
+Entorno usado: Node.js 24.13.0, npm 11.6.2, Git 2.56.0.windows.4 y PowerShell 5.1.
+Las dependencias existentes estaban instaladas; no se añadieron ni reinstalaron.
+
+| Comprobación | Resultado |
+| --- | --- |
+| `npm run typecheck` | Correcto, código y pruebas con TypeScript estricto |
+| `npm test` | 4 archivos y 190 pruebas correctos: 189 CSV y 1 de `GET /health` |
+| `npm run build` | Correcto, salida en `dist/` excluida de Git |
+
+Se cubren sintaxis, UTF-8/BOM, terminadores, cabecera, columnas, campos obligatorios,
+normalización, Unicode, precios exactos, stock, duplicados, localización/orden de
+errores, truncamiento, archivos vacíos, límites y prioridad estructural.
+La prueba HTTP existente verifica 200, Content-Type JSON y cuerpo de `/health`
+sin iniciar el servidor de desarrollo.
+
+La primera ejecución detectó un paréntesis incorrecto en una prueba nueva; se
+corrigió. La ejecución final de las tres comprobaciones es correcta.
+No se presentan las pruebas históricas de arranque o instalación como ejecutadas
+de nuevo. Las pruebas de límites no equivalen a pruebas de carga en producción.
+
+### Entrega local de la sesión 04
+
+- Rama `main`, HEAD publicado de partida `47278b3`, sin nuevos commits.
+- Cinco documentos actualizados: AGENTS, README, PROJECT_BRIEF, STATUS y notas
+  de avance del CONTRATO_CSV; sus reglas y ejemplos aprobados se conservan.
+- Cuatro módulos nuevos en `src/csv/` y tres archivos nuevos de pruebas CSV.
+- Código HTTP, prueba original, dependencias y configuraciones preservados.
+- Sin staging, creación de ramas, commit, push ni despliegue por parte de Codex.
+- Revisión final de diff, enlaces, ejemplos, exclusiones y alcance registrada
+  en el informe de entrega.
+
+Alex debe revisar los cambios y realizar manualmente el commit y el push desde
+GitHub Desktop. La sesión 04 no está publicada todavía.
 
 ## Pendiente y próximo paso
 
-No quedan decisiones D01–D10 pendientes de aprobación. Permanecen abiertos los
-detalles internos enumerados en la sección 14 de `CONTRATO_CSV.md`: parsing,
-organización del código, modelo PostgreSQL, coordinación concurrente, formato
-de identificadores y contratos de consulta. Los límites de V1 se evaluarán
-posteriormente con pruebas de carga.
+D01–D10 siguen aprobadas. El procesamiento en memoria cubre las reglas de
+contenido de D01–D04, duplicados internos de D05, límites CSV de D06 y errores
+locales de D07. El rechazo completo no sustituye la futura atomicidad en la base
+de datos: faltan las garantías persistentes de D05 y D08–D10.
 
-Próxima sesión técnica recomendada: preparar pruebas de los registros y su
-validación conforme al contrato aprobado, con alcance de implementación
-expresamente autorizado. La recepción multipart y la persistencia se abordarán
-progresivamente en sesiones posteriores.
+Próxima sesión técnica recomendada: preparar PostgreSQL, diseñar el modelo de
+productos/importaciones y añadir pruebas de persistencia, con alcance
+expresamente autorizado. Deben concretarse migraciones, identificadores y
+restricciones de unicidad de SKU y huella para sustentar posteriormente
+transacciones, rollback e idempotencia segura ante concurrencia.
 
-Importación CSV, procesamiento de archivos, PostgreSQL y sus tablas,
-deduplicación, transacciones y consultas de productos/importaciones siguen sin
-implementar. La API disponible conserva únicamente la base técnica de la sesión 01.
+La recepción multipart, su límite de cuerpo HTTP, `POST /importaciones` y las
+consultas se abordarán después. El éxito en memoria no es un 201 ni una
+importación confirmada. La confirmación y publicación de esta entrega quedan
+pendientes de intervención manual.

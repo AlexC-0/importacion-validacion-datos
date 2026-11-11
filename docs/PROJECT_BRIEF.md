@@ -48,17 +48,29 @@ manuales y se preparó la propuesta de [CONTRATO_CSV.md](CONTRATO_CSV.md).
 El usuario publicó el commit `cb89a65`, integrado en `main` mediante `52bc5c1`.
 Se conservaron intactos el código, las dependencias y el comportamiento de la API.
 
-## Alcance de la sesión 03
+## Sesión 03 — Completada y publicada
 
-- Consolidar D01–D10 aprobadas por Alex Cobián como contrato CSV V1.
-- Reflejar la modificación de D10: nueva importación confirmada con 201,
-  repetición exacta con 200 y recuperación del resultado existente sin nuevas
-  inserciones, y otro archivo con SKU existentes con 409.
-- Alinear ejemplos, códigos, concurrencia y casos límite con esas respuestas.
-- Separar reglas contractuales de los aspectos internos de implementación pendientes.
-- Actualizar el estado real y dejar la documentación para commit y push manuales.
-- Mantener intactos código, pruebas, configuración y dependencias.
-  La aprobación del contrato no autoriza implementar el importador.
+D01–D10 quedaron aprobadas y consolidadas en `47278b3`, publicado en `main`.
+El contrato distingue nueva importación confirmada con 201, repetición exacta
+con 200 y recuperación del resultado existente, y otro archivo con SKU
+existentes con 409. Se alinearon ejemplos, códigos, concurrencia y casos límite
+sin implementar funcionalidades.
+
+## Sesión 04 — Procesamiento y validación CSV
+
+La autorización de esta sesión incorpora un componente independiente que recibe
+bytes originales y devuelve productos normalizados o errores estructurados.
+
+- Interpretación estricta de UTF-8, BOM, comillas, delimitador, cabecera y filas.
+- Normalización y validación de SKU, nombre, precio y stock.
+- Precios exactos en céntimos y duplicados internos con referencia a la primera fila.
+- Límites de contenido y detalles, prioridad estructural y rechazo completo.
+- Pruebas con Vitest, conservando la prueba existente de `GET /health`.
+- Parser acotado al contrato, sin dependencias añadidas ni cambios en las rutas.
+
+No incorpora recepción HTTP, multipart, persistencia, transacciones, conflictos
+contra catálogo, idempotencia persistente ni concurrencia.
+Los cambios quedan locales para revisión y publicación manual por el usuario.
 
 ## Exclusiones
 
@@ -77,9 +89,9 @@ El formato aprobado es `sku,nombre,precio_eur,stock`.
 normalización, validación, duplicados, atomicidad, huella de bytes originales,
 errores y respuestas HTTP. No quedan decisiones D01–D10 pendientes de aprobación.
 
-Quedan por diseñar las bibliotecas y organización interna, la persistencia y
-coordinación concurrente en PostgreSQL, el formato de identificadores y las
-consultas de productos e importaciones. Los límites aprobados de V1 se evaluarán
+El parsing y la validación en memoria están implementados en `src/csv/`.
+Quedan por diseñar recepción multipart, persistencia y coordinación concurrente
+en PostgreSQL, formato de identificadores y consultas de productos e importaciones. Los límites aprobados de V1 se evaluarán
 con futuras pruebas de carga; esa evaluación no impide usarlos como referencia.
 No se añaden infraestructura ni tablas durante esta sesión.
 
@@ -115,5 +127,18 @@ endpoints adicionales ni persistencia.
 
 D01–D10 registradas como aprobadas, repetición exacta coherente con HTTP 200 en
 todo el contrato, referencias y ejemplos comprobados, e identificación de
-aspectos internos pendientes. Los cambios documentales se entregan sin staging,
-commit ni push; el usuario realizará la confirmación y publicación manuales.
+aspectos internos pendientes. Los cambios documentales se entregaron sin staging,
+commit ni push por parte de Codex; Alex ya los confirmó y publicó en `47278b3`.
+
+## Criterios de cierre de la sesión 04
+
+Componente reutilizable y tipado conforme a las reglas de contenido CSV,
+con pruebas de casos válidos, inválidos, límites y errores localizados.
+`typecheck`, `test` y `build` deben pasar, incluida la prueba HTTP existente.
+La documentación distingue implementación disponible y garantías futuras.
+No se modifican dependencias, rutas ni infraestructura; los cambios se dejan
+sin staging, commit ni push para revisión manual.
+
+Próxima sesión recomendada: preparar PostgreSQL, el modelo de productos e
+importaciones y sus pruebas antes de integrar persistencia y recepción HTTP.
+Requiere autorización específica de ese alcance.

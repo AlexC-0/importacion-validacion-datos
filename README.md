@@ -18,10 +18,16 @@ Durante la sesión 03, Alex Cobián aprobó D01–D10 del
 [contrato CSV V1](docs/CONTRATO_CSV.md): una importación nueva confirmada devuelve
 201; el reenvío exacto recupera el resultado existente con 200, sin nuevas
 inserciones; otro archivo con SKU existentes devuelve 409.
-Son reglas para la futura implementación, no funcionalidades ya disponibles.
+La sesión 03 está publicada en `47278b3`. Esas respuestas HTTP pertenecen a
+la futura importación persistida; todavía no existe `POST /importaciones`.
 
-Todavía no se han implementado la base de datos, la importación CSV ni las
-consultas de productos e importaciones. No hay despliegue.
+La sesión 04 incorpora un procesador CSV independiente de HTTP y persistencia.
+Valida los bytes originales, normaliza productos, detecta SKU duplicados dentro
+del archivo y devuelve errores por fila y campo, sin productos parcialmente aceptados.
+
+Quedan pendientes recepción multipart, PostgreSQL, transacciones, conflictos con
+productos guardados, idempotencia persistente, concurrencia y consultas.
+La API sigue exponiendo únicamente `GET /health`. No hay despliegue.
 
 ## Tecnologías y requisitos
 
@@ -85,6 +91,50 @@ npm run build
 npm start
 ```
 
+## Procesador CSV
+
+La función `processProductsCsv(content: Uint8Array)`, en
+`src/csv/process-products-csv.ts`, admite también `Buffer`. Recibe los bytes
+originales para comprobar UTF-8 y tamaño; no modifica la entrada ni realiza I/O.
+
+Ejemplo desde un archivo TypeScript en la raíz del proyecto:
+
+```typescript
+import { processProductsCsv } from './src/csv/process-products-csv.js';
+
+const resultado = processProductsCsv(Buffer.from(
+  'sku,nombre,precio_eur,stock\n ab-01 ,Café molido,12.50,10',
+  'utf8',
+));
+
+if (resultado.ok) {
+  console.log(resultado.productos);
+  // [{ sku: 'AB-01', nombre: 'Café molido', precio_centimos: 1250, stock: 10 }]
+} else {
+  console.log(resultado.error);
+}
+```
+
+El resultado es una unión tipada:
+
+- `ok: true`: `productos` con SKU, nombre, precio en céntimos enteros y stock.
+- `ok: false`: `error` con código, mensaje, detalles por fila/campo e indicador
+  `errores_truncados`; nunca incluye productos.
+
+Se comprueba toda la estructura antes de validar datos para conservar la
+prioridad contractual de errores. Se aplican límites inclusivos de 5 MiB de bytes
+originales, 10000 productos y 100 detalles de error devueltos.
+
+El parser está acotado al contrato: al prohibir campos multilínea, permite
+controlar las filas físicas directamente sin añadir dependencias.
+La normalización recorta únicamente espacios ASCII y tabuladores en extremos,
+convierte SKU ASCII a mayúsculas y nombres a NFC. Los precios se convierten a
+céntimos mediante dígitos enteros, sin redondeo ni aritmética decimal binaria.
+
+Dos llamadas con los mismos bytes vuelven a validarlos: este componente no
+registra importaciones ni aplica la idempotencia persistente D09/D10.
+Su éxito significa datos válidos en memoria, no una importación confirmada.
+
 ## Pruebas y comprobaciones
 
 ```powershell
@@ -96,7 +146,18 @@ npm run build
 `typecheck` comprueba los tipos de código y pruebas. `build` genera solo la
 aplicación en `dist/`. La prueba HTTP valida estado 200, Content-Type y cuerpo
 de `GET /health`; no necesita PostgreSQL ni un servidor iniciado.
+Las pruebas CSV cubren sintaxis, normalización, gramáticas y rangos, duplicados,
+localización y prioridad de errores, rechazo completo y límites.
+Los casos grandes se construyen en memoria.
+
+Para ejecutar solo el procesador:
+
+```powershell
+npm test -- tests/csv-parser.test.ts tests/csv-products.test.ts tests/csv-limits.test.ts
+```
+
 Para mantener Vitest observando cambios, usa `npm run test:watch`.
+Los resultados de la última ejecución están en [STATUS](docs/STATUS.md).
 
 ## Estructura
 
@@ -104,12 +165,20 @@ Para mantener Vitest observando cambios, usa `npm run test:watch`.
 src/
   app.ts                 # Aplicación Express y rutas
   server.ts              # Arranque del servidor local
+  csv/
+    process-products-csv.ts # Entrada pública: bytes y resultado tipado
+    parse-csv.ts          # Sintaxis, cabecera, filas y columnas
+    validate-products.ts  # Normalización, campos y duplicados internos
+    types.ts              # Tipos, límites y errores
 tests/
   health.test.ts         # Contrato HTTP de /health
+  csv-parser.test.ts     # Codificación y estructura CSV
+  csv-products.test.ts   # Validación y normalización
+  csv-limits.test.ts     # Límites, prioridad y rechazo completo
 docs/
   PROJECT_BRIEF.md        # Alcance y criterios de finalización
   STATUS.md               # Estado real y siguiente paso
-  CONTRATO_CSV.md         # Contrato V1 aprobado; implementación pendiente
+  CONTRATO_CSV.md         # Contrato V1 aprobado; implementación parcial
 AGENTS.md                 # Instrucciones operativas para Codex
 .env.example              # Configuración local de ejemplo
 package.json
@@ -129,8 +198,10 @@ en castellano y una Description fiel al trabajo realizado; tiene prohibido
 ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
 no modifique expresamente esta norma.
 
-La sesión 02 ya está publicada en GitHub; la API no está desplegada.
-La sesión 03 consolida documentación y queda pendiente de revisión, commit y
-push manuales. La aprobación de D01–D10 no autoriza por sí sola implementar
-el importador. El siguiente trabajo recomendado es preparar pruebas del
-contrato y validación de registros, dentro de una sesión expresamente autorizada.
+Las sesiones 02 y 03 ya están publicadas. La implementación de la sesión 04
+queda local, pendiente de revisión, commit y push manuales.
+
+Próximo paso recomendado: preparar PostgreSQL, el modelo de productos e
+importaciones y pruebas de persistencia, con un alcance expresamente autorizado.
+La integración HTTP se realizará cuando pueda respetar las garantías de
+importación confirmada del contrato.

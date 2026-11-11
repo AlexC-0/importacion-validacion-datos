@@ -19,8 +19,9 @@ el resultado existente; otro archivo con SKU existentes, `409 Conflict`.
 Las secciones 1–13 fijan el comportamiento aprobado y sus ejemplos de referencia.
 La sección 14 separa los aspectos internos de implementación aún pendientes.
 La aprobación del contrato no autoriza por sí sola implementar el importador.
-Actualmente solo existen `GET /health` y su prueba: no hay importador, tablas,
-transacciones ni endpoints de importación implementados.
+Tras la sesión 04 existen `GET /health`, su prueba y el procesamiento/validación
+de contenido CSV en memoria con pruebas propias. No hay recepción HTTP, tablas,
+transacciones ni endpoint de importación. Las reglas aprobadas no cambian.
 
 ## 1. Codificación y delimitador aprobados — D01
 
@@ -367,7 +368,9 @@ se diseñarán posteriormente; no se incorporan nuevos endpoints en esta sesión
 
 ## 12. Ejemplos y casos para futuras pruebas
 
-Los siguientes casos expresan el contrato aprobado; todavía no son pruebas implementadas.
+Los siguientes casos expresan el contrato completo aprobado. Las pruebas de la
+sesión 04 cubren el contenido CSV y sus errores en memoria; resultados HTTP,
+persistencia, repetición y concurrencia siguen pendientes de implementación.
 
 ### Archivo válido
 
@@ -454,8 +457,9 @@ de D10 a recuperación de repeticiones exactas mediante HTTP 200.
 Las reglas anteriores ya no están pendientes de aprobación. Quedan por concretar
 al autorizar las próximas sesiones de implementación:
 
-- Biblioteca de parsing y recepción multipart, organización del código y gestión
-  de recursos, sin alterar gramáticas, límites ni errores observables.
+- Recepción multipart y gestión de sus recursos. La sesión 04 incorpora un
+  parser acotado sin dependencias, organizado en `src/csv/`, y validación en
+  memoria, sin alterar gramáticas, límites ni errores aprobados.
 - Modelo y representación en PostgreSQL, migraciones y mecanismos de unicidad,
   transacciones y coordinación concurrente que garanticen lo aprobado.
 - Formato definitivo de identificadores y forma de recuperar el resultado
@@ -465,8 +469,12 @@ al autorizar las próximas sesiones de implementación:
 - Evaluación futura de los límites con pruebas de carga. Los valores aprobados
   siguen vigentes mientras no se acuerde y documente un cambio.
 
-Próximo paso recomendado: preparar los casos automatizados del contrato y la
-validación de registros en una sesión de implementación expresamente autorizada.
-La sesión 03 solo consolida documentación: no implementa importación, persistencia,
-pruebas funcionales nuevas ni infraestructura. Los commits y push siguen siendo
-manuales y exclusivos del usuario.
+La sesión 03 consolidó y publicó el contrato en `47278b3`. La sesión 04
+implementa y prueba el procesamiento del contenido con autorización expresa;
+no completa las garantías persistentes de D05 y D08–D10 ni los límites multipart
+de D06. El éxito del procesador significa datos válidos en memoria, no una
+importación confirmada ni una respuesta HTTP 201.
+
+Próximo paso recomendado: preparar PostgreSQL, el modelo de productos e
+importaciones y pruebas de persistencia en una sesión expresamente autorizada.
+Los commits y push siguen siendo manuales y exclusivos del usuario.

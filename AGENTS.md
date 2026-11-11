@@ -7,9 +7,12 @@
 - Inspecciona primero la ruta, `git status --short --branch`, la rama y los remotos.
 - Trabaja exclusivamente dentro de este proyecto independiente. No modifiques
   archivos, historial ni remotos de otros proyectos.
-- Respeta la sesión y el alcance autorizados. La sesión 03 es documental:
-  consolidar el contrato CSV aprobado y actualizar el estado. No implementes
-  importación, procesamiento de archivos, tablas PostgreSQL ni cambios en la API.
+- Respeta la sesión y el alcance autorizados. La sesión 04 autoriza expresamente
+  un procesador CSV independiente de HTTP y persistencia, su validación y pruebas.
+  No añadas rutas, recepción multipart, PostgreSQL, transacciones, comprobación
+  de productos persistidos, idempotencia persistente ni coordinación concurrente.
+- Conserva las reglas de `docs/CONTRATO_CSV.md`. Si surge una incompatibilidad,
+  informa antes de cambiar el comportamiento aprobado.
 - D01–D10 están aprobadas en `docs/CONTRATO_CSV.md`: una creación confirmada
   devuelve 201, una repetición exacta recupera el resultado existente con 200 y
   otro archivo con conflictos de SKU devuelve 409.
