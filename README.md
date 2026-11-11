@@ -11,9 +11,14 @@ en la rama principal `main`, con el commit inicial `852e829`.
 La versión actual del proyecto en `package.json` es `0.1.0`.
 
 Está preparada la API con Express y TypeScript, el endpoint `GET /health`
-y su prueba con Vitest y Supertest. La sesión 02 actualiza la documentación y
-añade una [propuesta de contrato CSV](docs/CONTRATO_CSV.md), pendiente de revisión
-y aprobación antes de implementar sus reglas.
+y su prueba con Vitest y Supertest. La documentación de la sesión 02 se publicó
+en `cb89a65` y quedó integrada en `main` mediante `52bc5c1`.
+
+Durante la sesión 03, Alex Cobián aprobó D01–D10 del
+[contrato CSV V1](docs/CONTRATO_CSV.md): una importación nueva confirmada devuelve
+201; el reenvío exacto recupera el resultado existente con 200, sin nuevas
+inserciones; otro archivo con SKU existentes devuelve 409.
+Son reglas para la futura implementación, no funcionalidades ya disponibles.
 
 Todavía no se han implementado la base de datos, la importación CSV ni las
 consultas de productos e importaciones. No hay despliegue.
@@ -104,7 +109,7 @@ tests/
 docs/
   PROJECT_BRIEF.md        # Alcance y criterios de finalización
   STATUS.md               # Estado real y siguiente paso
-  CONTRATO_CSV.md         # Propuesta técnica pendiente de aprobación
+  CONTRATO_CSV.md         # Contrato V1 aprobado; implementación pendiente
 AGENTS.md                 # Instrucciones operativas para Codex
 .env.example              # Configuración local de ejemplo
 package.json
@@ -124,6 +129,8 @@ en castellano y una Description fiel al trabajo realizado; tiene prohibido
 ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
 no modifique expresamente esta norma.
 
-El código está publicado en GitHub; la API no está desplegada. El siguiente
-paso es revisar las decisiones abiertas de `docs/CONTRATO_CSV.md`.
-La documentación de la sesión 02 debe confirmarse y subirse manualmente.
+La sesión 02 ya está publicada en GitHub; la API no está desplegada.
+La sesión 03 consolida documentación y queda pendiente de revisión, commit y
+push manuales. La aprobación de D01–D10 no autoriza por sí sola implementar
+el importador. El siguiente trabajo recomendado es preparar pruebas del
+contrato y validación de registros, dentro de una sesión expresamente autorizada.

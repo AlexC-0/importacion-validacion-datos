@@ -22,7 +22,7 @@ multiusuario en la primera versión.
 
 1. Recibir archivos CSV de productos mediante una API REST.
 2. Validar formato y datos de cada registro.
-3. Detectar registros duplicados de acuerdo con una clave de producto por definir.
+3. Detectar registros duplicados mediante el SKU normalizado definido en el contrato.
 4. Informar de errores identificando fila y campo, con un mensaje comprensible.
 5. Guardar productos e importaciones válidas en PostgreSQL mediante transacciones.
 6. Impedir que una misma importación se procese y guarde más de una vez.
@@ -30,8 +30,8 @@ multiusuario en la primera versión.
 8. Mantener pruebas automatizadas y documentación técnica reproducible.
 
 Una importación inválida no debe dejar productos parcialmente guardados.
-El diseño del registro de intentos fallidos se decidirá junto con el modelo
-de datos; no se presupone un esquema en esta sesión.
+V1 no almacena de forma persistente intentos fallidos, según D08.
+El modelo de datos y sus mecanismos internos se diseñarán posteriormente.
 
 ## Sesión 01 — Completada
 
@@ -41,17 +41,24 @@ El commit `852e829` está publicado en `main` en el repositorio público
 [AlexC-0/importacion-validacion-datos](https://github.com/AlexC-0/importacion-validacion-datos).
 La API no está desplegada.
 
-## Alcance de la sesión 02
+## Sesión 02 — Completada y publicada
 
-- Actualizar la documentación para reflejar el estado publicado.
-- Establecer que todos los commits y push los realiza exclusivamente el usuario
-  desde GitHub Desktop; Codex tiene prohibido ejecutarlos o usar acciones equivalentes.
-- Preparar [CONTRATO_CSV.md](CONTRATO_CSV.md) como propuesta pendiente de aprobación
-  para `sku,nombre,precio_eur,stock`.
-- Documentar normalización, validaciones, errores, duplicados, límites,
-  transacciones, reintentos y ejemplos para futuras pruebas.
-- Mantener intactos el código, las dependencias y el comportamiento actual.
-- Dejar los cambios sin confirmar para revisión, commit y push manuales.
+Se actualizó el estado, se estableció la norma permanente de commits y push
+manuales y se preparó la propuesta de [CONTRATO_CSV.md](CONTRATO_CSV.md).
+El usuario publicó el commit `cb89a65`, integrado en `main` mediante `52bc5c1`.
+Se conservaron intactos el código, las dependencias y el comportamiento de la API.
+
+## Alcance de la sesión 03
+
+- Consolidar D01–D10 aprobadas por Alex Cobián como contrato CSV V1.
+- Reflejar la modificación de D10: nueva importación confirmada con 201,
+  repetición exacta con 200 y recuperación del resultado existente sin nuevas
+  inserciones, y otro archivo con SKU existentes con 409.
+- Alinear ejemplos, códigos, concurrencia y casos límite con esas respuestas.
+- Separar reglas contractuales de los aspectos internos de implementación pendientes.
+- Actualizar el estado real y dejar la documentación para commit y push manuales.
+- Mantener intactos código, pruebas, configuración y dependencias.
+  La aprobación del contrato no autoriza implementar el importador.
 
 ## Exclusiones
 
@@ -61,19 +68,20 @@ La API no está desplegada.
 - Microservicios y arquitectura distribuida.
 - Despliegue del servicio.
 - Sustituir PostgreSQL por MySQL o usar PHP/Apache como servidor de esta API.
-- Implementar importación, persistencia o consultas funcionales durante las sesiones 01 y 02.
+- Implementar importación, persistencia o consultas funcionales durante las sesiones 01, 02 y 03.
 
-## Decisiones pendientes
+## Contrato aprobado y aspectos de implementación pendientes
 
-El formato de partida de la propuesta es `sku,nombre,precio_eur,stock`.
-Antes de implementar se revisarán y aprobarán las decisiones de
-[CONTRATO_CSV.md](CONTRATO_CSV.md): tipos y límites, normalización, duplicados,
-conflictos con productos existentes, codificación, numeración de filas,
-errores y respuestas HTTP. Las propuestas no equivalen a reglas aprobadas.
+El formato aprobado es `sku,nombre,precio_eur,stock`.
+[CONTRATO_CSV.md](CONTRATO_CSV.md) recoge D01–D10: tipos y límites,
+normalización, validación, duplicados, atomicidad, huella de bytes originales,
+errores y respuestas HTTP. No quedan decisiones D01–D10 pendientes de aprobación.
 
-También se definirá cómo identificar una importación repetida, qué ocurre ante
-solicitudes concurrentes y cómo consultar estados y resultados. PostgreSQL se
-preparará en una sesión posterior, con Docker solo si resulta conveniente.
+Quedan por diseñar las bibliotecas y organización interna, la persistencia y
+coordinación concurrente en PostgreSQL, el formato de identificadores y las
+consultas de productos e importaciones. Los límites aprobados de V1 se evaluarán
+con futuras pruebas de carga; esa evaluación no impide usarlos como referencia.
+No se añaden infraestructura ni tablas durante esta sesión.
 
 ## Criterios de finalización de la primera versión
 
@@ -81,7 +89,8 @@ preparará en una sesión posterior, con Docker solo si resulta conveniente.
 - Los errores de datos señalan filas y campos y se verifican mediante pruebas.
 - Se detectan los duplicados definidos por el contrato, tanto dentro del archivo
   como respecto de los productos ya guardados.
-- Repetir una importación no duplica productos ni importaciones procesadas.
+- Reenviar los mismos bytes de una importación confirmada devuelve 200 con su
+  resultado original, sin duplicar productos ni crear otra importación.
 - Una validación fallida o un error de persistencia no deja productos parciales.
 - Las consultas de productos e importaciones funcionan según el contrato documentado.
 - Hay pruebas de casos válidos, inválidos, duplicados, repetición y rollback.
@@ -97,7 +106,14 @@ incluida cualquier confirmación o acción pendiente.
 
 ## Criterios de cierre de la sesión 02
 
-Documentación coherente con GitHub, norma permanente de commits y push manuales
-sin instrucciones contradictorias, y contrato CSV marcado como propuesta con
-decisiones abiertas y casos verificables. Los cambios quedan sin confirmar;
-no se implementan endpoints adicionales ni persistencia.
+La sesión 02 entregó documentación coherente, la norma permanente de commits y
+push manuales y un contrato entonces propuesto con casos verificables.
+La entrega ya fue confirmada y publicada por el usuario, sin implementar
+endpoints adicionales ni persistencia.
+
+## Criterios de cierre de la sesión 03
+
+D01–D10 registradas como aprobadas, repetición exacta coherente con HTTP 200 en
+todo el contrato, referencias y ejemplos comprobados, e identificación de
+aspectos internos pendientes. Los cambios documentales se entregan sin staging,
+commit ni push; el usuario realizará la confirmación y publicación manuales.

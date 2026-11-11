@@ -7,11 +7,15 @@
 - Inspecciona primero la ruta, `git status --short --branch`, la rama y los remotos.
 - Trabaja exclusivamente dentro de este proyecto independiente. No modifiques
   archivos, historial ni remotos de otros proyectos.
-- Respeta la sesión y el alcance autorizados. La sesión 02 es documental:
-  actualizar el estado y proponer el contrato CSV. No implementes importación,
-  procesamiento de archivos, tablas PostgreSQL ni cambios en la API durante ella.
-- Las restricciones del contrato CSV son propuestas hasta que el usuario las
-  apruebe expresamente. No conviertas ejemplos o alternativas en requisitos finales.
+- Respeta la sesión y el alcance autorizados. La sesión 03 es documental:
+  consolidar el contrato CSV aprobado y actualizar el estado. No implementes
+  importación, procesamiento de archivos, tablas PostgreSQL ni cambios en la API.
+- D01–D10 están aprobadas en `docs/CONTRATO_CSV.md`: una creación confirmada
+  devuelve 201, una repetición exacta recupera el resultado existente con 200 y
+  otro archivo con conflictos de SKU devuelve 409.
+- La aprobación del contrato no autoriza por sí sola su implementación.
+  Distingue reglas aprobadas de aspectos internos aún pendientes y conserva
+  los límites de cada encargo.
 - Mantén cambios pequeños, comprensibles y enfocados en una funcionalidad verificable.
 - Conserva los cambios existentes del usuario; no los sobrescribas ni reviertas
   sin autorización.
