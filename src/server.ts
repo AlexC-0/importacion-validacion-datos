@@ -11,8 +11,9 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 // Un pool por proceso; la conexión es diferida hasta la primera operación SQL.
 // Sin DATABASE_URL, health sigue disponible y la importación responde 503.
 const pool = process.env.DATABASE_URL ? createDatabasePool(requiredDatabaseUrl()) : undefined;
-const service = pool ? new ImportService(new ImportRepository(pool)) : undefined;
-const server = createApp(service).listen(port, '127.0.0.1', () => {
+const repository = pool ? new ImportRepository(pool) : undefined;
+const service = repository ? new ImportService(repository) : undefined;
+const server = createApp(service, repository).listen(port, '127.0.0.1', () => {
   console.log(`API disponible en http://127.0.0.1:${port}`);
 });
 let poolClosed: Promise<void> | undefined;

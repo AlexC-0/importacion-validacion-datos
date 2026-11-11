@@ -101,7 +101,7 @@ funcional de respuestas 200/201/409 durante la sesión 05.
 
 Alex publicó la sesión 06 en `f4b63e3`, verificado al iniciar la sesión 07.
 
-## Sesión 07 — Integración HTTP de importaciones
+## Sesión 07 — Integración HTTP de importaciones, publicada
 
 - `POST /importaciones` recibe un archivo multipart en el campo `archivo`.
 - Límites de bytes originales y cuerpo completo, tipos MIME y charset UTF-8.
@@ -111,7 +111,20 @@ Alex publicó la sesión 06 en `f4b63e3`, verificado al iniciar la sesión 07.
 - Pruebas HTTP y PostgreSQL real, incluidas concurrencia e incertidumbre de COMMIT.
 - `GET /health` preservado; sin cambios en D01–D10 ni migraciones publicadas.
 
-La entrega queda local para revisión, commit y push manuales por Alex.
+Alex publicó la sesión 07 en `96a9ae0`, verificado al iniciar la sesión 08.
+
+## Sesión 08 — Consultas HTTP de solo lectura
+
+- GET /productos con orden por SKU, paginación y filtro por importación.
+- GET /importaciones con fecha descendente e ID como desempate.
+- GET /importaciones/:id con metadatos, hash y 404 para UUID inexistente.
+- Validación previa, errores seguros y consultas SQL parametrizadas.
+- Total y página en una misma instantánea; precios exactos y Unicode preservados.
+- Pruebas HTTP, PostgreSQL en modo read-only y verificación de filas sin cambios.
+- Sin nuevas tablas, dependencias ni cambios en D01–D10 o en la importación.
+
+Contrato: [HTTP_CONSULTAS](HTTP_CONSULTAS.md). Esta entrega queda local para
+revisión, commit y push manuales por Alex.
 
 ## Exclusiones
 
@@ -134,7 +147,8 @@ El parsing y la validación en memoria están implementados en `src/csv/`.
 La sesión 05 añade persistencia con UUID, precios enteros, relaciones y consultas
 internas. La sesión 06 coordina reintentos y conflictos bajo concurrencia.
 La sesión 07 añade recepción multipart y respuestas HTTP de importación.
-Quedan los contratos y rutas de consulta HTTP. Los límites aprobados de V1 se
+La sesión 08 incorpora el contrato y las rutas de consulta HTTP.
+Los límites aprobados de V1 se
 evaluarán con futuras pruebas de carga; no se modifican en esta sesión.
 
 ## Criterios de finalización de la primera versión
@@ -209,5 +223,14 @@ Recepción multipart acotada, contrato HTTP completo y reutilización del servic
 Pruebas de límites, errores, atomicidad y concurrencia; arranque y petición real.
 Tipos, pruebas y compilación correctos; documentación y cambios sin staging.
 
-Próximo paso recomendado: diseñar e implementar las consultas HTTP de productos
-e importaciones, con paginación y pruebas, sin ampliar el alcance V1.
+La sesión 07 está publicada en `96a9ae0`.
+
+## Criterios de cierre de la sesión 08
+
+Tres consultas funcionales, paginación determinista, filtro por importación,
+metadatos correctos y errores de entrada/inexistencia/persistencia controlados.
+Las consultas no modifican registros y solo observan datos confirmados.
+Tipos, pruebas, build y demostración HTTP real correctos, sin cambios de esquema.
+
+Próximo paso recomendado: cierre técnico de V1, pruebas de aceptación,
+reproducibilidad de la instalación y preparación de integración continua.

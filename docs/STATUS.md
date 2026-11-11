@@ -18,8 +18,10 @@ Fecha de actualización: 11 de noviembre de 2026.
   (`59dbc4230b9c6826fdb7ebcbe8feb6afbf45d6e1`).
 - Sesión 06 publicada por Alex: `f4b63e3`
   (`f4b63e31e29e895cb012512a21288a3567637115`).
-- Al iniciar la sesión 07, `main` local y GitHub coincidían en `f4b63e3`;
-  no había cambios pendientes. La sesión 07 queda local para revisión,
+- Sesión 07 publicada por Alex: `96a9ae0`
+  (`96a9ae06b560d1c08dfafd39ca558ad53b99409d`).
+- Al iniciar la sesión 08, `main` local y GitHub coincidían en `96a9ae0`;
+  no había cambios pendientes. La sesión 08 queda local para revisión,
   commit y push manuales.
 - Versión del proyecto en `package.json`: `0.1.0`.
 - La API no está desplegada. Publicar código en GitHub no inicia un servicio.
@@ -366,7 +368,7 @@ Las nuevas pruebas verifican:
 - La entrega de sesión 06 quedó pendiente de revisión y publicación manual.
   Alex la publicó posteriormente en `f4b63e3`, verificado al iniciar la sesión 07.
 
-## Sesión 07 — Integración HTTP de importaciones
+## Sesión 07 — Integración HTTP de importaciones, publicada
 
 ### Estado inicial y alcance
 
@@ -400,7 +402,7 @@ configuración y pruebas. No había cambios previos que preservar.
 
 Detalles de uso y decisiones en [HTTP_IMPORTACIONES](HTTP_IMPORTACIONES.md).
 
-### Comprobaciones ejecutadas en la sesión 07
+### Comprobaciones históricas ejecutadas en la sesión 07
 
 | Comprobación | Resultado real |
 | --- | --- |
@@ -461,18 +463,121 @@ Rama main y HEAD f4b63e3 conservados. Sin staging, commit, push, ramas nuevas
 ni cambios en otros repositorios. Binarios, dependencias, dist y credenciales
 continúan excluidos. No se despliega la API.
 
-La sesión 07 queda pendiente de revisión, commit y push manuales de Alex
-desde GitHub Desktop.
+La sesión 07 se entregó pendiente de revisión, commit y push manuales de Alex.
+Alex la publicó después en 96a9ae0, verificado al comenzar la sesión 08.
+
+## Sesión 08 — Consultas HTTP de productos e importaciones
+
+### Inspección y contrato previo
+
+Repositorio limpio en main, HEAD 96a9ae0 coincidente con GitHub.
+La sesión 07 fue publicada por Alex; se revisaron instrucciones, contratos,
+código HTTP, repositorio SQL, migración y pruebas antes de modificar.
+
+PostgreSQL 18.6 seguía activo en 127.0.0.1:55432, PID 20536.
+No se reinstaló, reinicializó ni alteró ningún servicio de Windows, XAMPP,
+Docker o WSL. Desarrollo conserva cero importaciones y cero productos.
+
+Se redactó [HTTP_CONSULTAS](HTTP_CONSULTAS.md) antes de implementar las rutas,
+adoptando los valores del encargo y precisando gramática, UUID, desempate,
+serialización y errores. D01–D10 permanecen intactas.
+
+### Implementación
+
+- GET /productos: lista paginada, orden SKU ascendente y filtro importacion_id.
+  Se conservan nombre Unicode, stock y precio en céntimos enteros.
+- GET /importaciones: metadatos confirmados, orden creada_en DESC e id DESC,
+  sin exponer SHA-256 en el listado.
+- GET /importaciones/:id: detalle con SHA-256; UUID inválido 400,
+  UUID válido inexistente 404 NOT_FOUND.
+- limit predeterminado 20, rango 1..100; offset predeterminado 0,
+  hasta Number.MAX_SAFE_INTEGER. Gramática decimal estricta.
+- Validación previa de duplicados, desconocidos, codificación URL y UUID.
+  Errores 400/404/500/503 estructurados, sin datos internos.
+- Dos nuevos métodos SELECT en ImportRepository; detalle reutiliza findImportById.
+  Una sola sentencia por listado obtiene total y página con la misma instantánea.
+  La unión externa conserva el total cuando el offset deja vacía la página.
+- createApp conserva el primer argumento de importación y añade un segundo
+  argumento opcional para lectura. El servidor comparte el repositorio/pool.
+- Sin nuevas tablas, dependencias, migraciones ni cambios de importación,
+  concurrencia, idempotencia, health o recepción multipart.
+
+### Comprobaciones ejecutadas en la sesión 08
+
+| Comprobación | Resultado real |
+| --- | --- |
+| npm run typecheck | Correcto |
+| npm test | 363 pruebas correctas en 9 archivos |
+| npm run build | Correcto |
+| npm run test:integration | 88 pruebas reales correctas en 4 archivos |
+
+Total: 451 pruebas ejecutadas sin omisiones. Se conservan las 348 anteriores
+y se añaden 89 de parámetros/HTTP y 14 de integración de lectura.
+No se reinstalaron dependencias, al no haber cambios en package.json ni el lock.
+
+Las nuevas pruebas cubren catálogo vacío, defaults y extremos de paginación,
+offset fuera del catálogo, filtros, UUID, parámetros desconocidos/duplicados,
+codificación inválida e intentos de inyección SQL. Verifican Unicode, céntimos,
+proyección de campos, fechas UTC, desempate por ID, totales y errores seguros.
+
+Con PostgreSQL real se ejecutan las consultas con default_transaction_read_only=on
+y se comparan filas completas y versiones xmin antes/después: sin modificaciones.
+Se comprueba que una importación no confirmada no aparece y que COMMIT/ROLLBACK
+del competidor producen los resultados esperados. El historial se contrasta
+con varios CSV importados por HTTP y un reenvío idempotente.
+
+Las pruebas solo crean/eliminan esquemas propios de la base de integración.
+Los UPDATE de fechas para preparar empates son fixtures exclusivos de esa base;
+no pertenecen a las rutas ni alteran datos de desarrollo.
+
+### Demostración HTTP con servidor compilado
+
+Se arrancó dist/server.js como proceso real en un puerto temporal de loopback,
+usando un esquema propio de importacion_validacion_datos_test.
+
+- POST /importaciones: dos archivos nuevos 201 y repetición exacta 200.
+- GET /health: 200 y JSON esperado.
+- GET /productos: 200; tres SKU ordenados A-08, B-08 y Z-08.
+- GET /productos?limit=1&offset=1: 200; B-08 y paginacion
+  con limit 1, offset 1 y total 3.
+- GET /productos?importacion_id=<UUID>: 200; total filtrado 2.
+- GET /importaciones: 200; dos importaciones confirmadas.
+- GET /importaciones?limit=1&offset=1: 200; una entrada y total 2.
+- GET /importaciones/<UUID>: 200; hash y cantidad 2 comprobados.
+- limit=0 y UUID inválido: 400 INVALID_REQUEST.
+- UUID inexistente: 404 NOT_FOUND.
+- Filas y versiones comparadas antes/después de las consultas: sin cambios.
+- Cierre del servidor con código 0 y cero conexiones de ese proceso.
+
+El esquema propio de demostración se eliminó. No se insertaron ni borraron
+datos de desarrollo. El servidor temporal quedó detenido.
+
+### Entrega y control de versiones
+
+Revisión final correcta: git diff --check; 29 enlaces locales, 10 ejemplos JSON,
+4 bloques CSV y sintaxis de 3 ejemplos TypeScript revisados. Secciones 0–13
+del contrato de importación y métodos anteriores de persistencia intactos.
+Dependencias, migraciones y suites anteriores conservadas. Sin credenciales
+locales detectadas en archivos versionables; exclusiones verificadas.
+PostgreSQL 18.6 sigue en 127.0.0.1:55432; cero esquemas temporales y desarrollo
+con cero importaciones y cero productos. No quedan bloqueos.
+Se conserva main y HEAD 96a9ae0, sin staging, commit, push ni ramas nuevas.
+La sesión 08 queda pendiente de revisión y publicación manual de Alex desde
+GitHub Desktop. No se despliega la aplicación.
 
 ## Limitaciones y siguiente sesión
 
-No hay rutas de consulta HTTP de productos e importaciones, frontend,
-autenticación, colas, upsert ni despliegue. Los límites y plazos son operativos;
-no constituyen pruebas de carga ni una promesa de latencia o memoria global.
+OFFSET no garantiza una instantánea compartida entre distintas solicitudes:
+nuevas importaciones pueden desplazar páginas. Total y página sí son coherentes
+dentro de cada consulta. COUNT exactos y offsets altos requieren evaluación
+de rendimiento antes de adoptar volúmenes grandes; no hay pruebas de carga.
 
-La prueba de pérdida de respuesta inyecta el fallo después de un COMMIT real,
-sin reproducir una partición física de red. Un COMMIT incierto sin recuperación
-demostrable requiere reintentar los mismos bytes. No se afirma éxito sin evidencia.
+Las fechas HTTP tienen precisión de milisegundos; la ordenación usa la precisión
+de PostgreSQL. No se ofrece búsqueda avanzada, edición, eliminación, exportación,
+frontend, autenticación ni despliegue.
 
-Sesión 08 recomendada: definir e implementar las consultas HTTP de productos
-e importaciones con paginación y pruebas, manteniendo el alcance V1.
+La cobertura de COMMIT incierto sigue usando fallos inyectados en el driver;
+no es una prueba de corte físico de red. No quedan bloqueos de implementación.
+
+Sesión 09 recomendada: cierre técnico de V1 con pruebas de aceptación,
+revisión de instalación reproducible y preparación de integración continua.

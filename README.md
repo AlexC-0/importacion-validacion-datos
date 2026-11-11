@@ -31,9 +31,10 @@ transaccional de importaciones y productos, con consultas internas y pruebas rea
 La sesión 06 está publicada en `f4b63e3` e incorpora un servicio que coordina validación, huella de bytes,
 creación transaccional, conflictos, reintentos y solicitudes concurrentes.
 
-La sesión 07 añade `POST /importaciones`: recepción multipart, límites de bytes,
+La sesión 07 está publicada en `96a9ae0` y añade `POST /importaciones`: recepción multipart, límites de bytes,
 validación, persistencia e idempotencia con las respuestas aprobadas.
-`GET /health` conserva su comportamiento. Quedan pendientes las rutas de consulta.
+La sesión 08 añade `GET /productos`, `GET /importaciones` y su detalle por UUID,
+con paginación y consultas de solo lectura. `GET /health` conserva su comportamiento.
 No hay despliegue.
 
 ## Tecnologías y requisitos
@@ -125,6 +126,27 @@ límites, mecanismo multipart y ciclo de vida del servidor. Sin `DATABASE_URL`,
 health sigue operativo; un CSV válido recibe 503 y uno inválido conserva su
 error de validación. Con URL configurada pero PostgreSQL no disponible, el servicio
 devuelve el error técnico correspondiente.
+
+## Consultar productos e importaciones
+
+~~~powershell
+curl.exe -i "http://127.0.0.1:3000/productos?limit=20&offset=0"
+curl.exe -i "http://127.0.0.1:3000/importaciones?limit=20&offset=0"
+# Sustituye este UUID por uno obtenido del listado o de una importación:
+curl.exe -i "http://127.0.0.1:3000/importaciones/a2c10e86-a049-4d16-8f92-9023b3f44001"
+~~~
+
+Los listados devuelven la lista y `paginacion` con limit, offset y total.
+limit es 20 por defecto, entre 1 y 100; offset parte de 0.
+Productos se ordenan por SKU y admiten filtro `importacion_id`.
+Importaciones se ordenan por fecha e ID descendentes; el detalle incluye SHA-256.
+Los precios se devuelven en céntimos enteros y las fechas en UTC.
+
+Parámetros inválidos devuelven 400; un detalle inexistente, 404 NOT_FOUND.
+Una página vacía conserva su total real. Consultas sin persistencia disponible
+responden 503; health permanece operativo.
+Consulta [HTTP_CONSULTAS](docs/HTTP_CONSULTAS.md) para las reglas completas,
+formatos, errores y límites de paginación entre peticiones concurrentes.
 
 ## Procesador CSV
 
@@ -251,8 +273,8 @@ Las pruebas CSV cubren sintaxis, normalización, gramáticas y rangos, duplicado
 localización y prioridad de errores, rechazo completo y límites.
 Los casos grandes se construyen en memoria.
 
-`npm test` ejecuta 274 pruebas sin PostgreSQL: las 224 anteriores y 50 nuevas
-HTTP/streams. Las 74 pruebas reales de persistencia, coordinación e integración HTTP
+`npm test` ejecuta 363 pruebas sin PostgreSQL: las 274 anteriores y 89 de
+parámetros/HTTP de lectura. Las 88 pruebas reales de persistencia, coordinación e integración HTTP
 se ejecutan por separado con `npm run test:integration`;
 requieren la base exclusiva `importacion_validacion_datos_test` y no se omiten
 silenciosamente si falta configuración.
@@ -275,6 +297,8 @@ src/
   http/
     receive-csv.ts        # Multipart, cabeceras, límites y cierre de streams
     import-route.ts       # Traducción de resultados a HTTP
+    read-parameters.ts    # Paginación, UUID y validación de parámetros
+    read-routes.ts        # Listados y detalle de solo lectura
   csv/
     process-products-csv.ts # Entrada pública: bytes y resultado tipado
     parse-csv.ts          # Sintaxis, cabecera, filas y columnas
@@ -299,6 +323,9 @@ tests/
   import-service.test.ts # Decisiones del servicio y errores técnicos
   import-http.test.ts    # Contrato HTTP y límites
   import-streams.test.ts # Interrupción, timeout y cierre de recepción
+  read-parameters.test.ts # Gramáticas y rangos de consulta
+  read-http.test.ts      # Respuestas, proyección y errores de lectura
+  integration/read-http.test.ts # Paginación, confirmación y ausencia de escrituras
   helpers/multipart.ts  # Solicitudes construidas en memoria
   integration/import-http.test.ts # HTTP y PostgreSQL, carreras y rollback
   integration/persistence.test.ts # Pruebas reales en base aislada
@@ -309,6 +336,7 @@ docs/
   CONTRATO_CSV.md         # Contrato V1 aprobado; implementación parcial
   PERSISTENCIA.md         # Modelo, configuración y pruebas PostgreSQL
   HTTP_IMPORTACIONES.md   # Uso de la ruta, respuestas y recepción multipart
+  HTTP_CONSULTAS.md       # Contrato de las consultas, paginación y ejemplos
 AGENTS.md                 # Instrucciones operativas para Codex
 .env.example              # Configuración local de ejemplo
 package.json
@@ -328,8 +356,9 @@ en castellano y una Description fiel al trabajo realizado; tiene prohibido
 ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
 no modifique expresamente esta norma.
 
-La sesión 06 está publicada en `f4b63e3`. La sesión 07 queda local,
+La sesión 07 está publicada en `96a9ae0`. La sesión 08 queda local,
 pendiente de revisión, commit y push manuales.
 
-Próximo paso recomendado: definir e implementar las consultas HTTP de productos
-e importaciones, con paginación y pruebas, dentro del alcance V1.
+Próximo paso recomendado: cierre técnico de V1 con pruebas de aceptación,
+revisión de instalación reproducible y preparación de integración continua.
+Las pruebas de carga y de fallos físicos de red siguen pendientes.

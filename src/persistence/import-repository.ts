@@ -16,6 +16,16 @@ export interface StoredProduct extends NormalizedProduct {
   importacion_id: string;
 }
 
+export interface Page<T> { items: T[]; total: number }
+export interface PageOptions { limit: number; offset: number }
+export type ImportSummary = Omit<StoredImport, 'sha256'>;
+type Counted<T> = { total: string } & (T | { [K in keyof T]: null });
+function totalAsNumber(value: string): number {
+  const result = Number(value);
+  if (!Number.isSafeInteger(result) || result < 0) throw new PersistenceError('UNSAFE_TOTAL');
+  return result;
+}
+
 export class ImportRepository {
   constructor(private readonly pool: Pool) {}
 
@@ -52,6 +62,45 @@ export class ImportRepository {
       }
       return result;
     });
+  }
+
+  /** Total y página comparten una instantánea; LEFT JOIN conserva el total en páginas vacías. */
+  async listProducts(options: PageOptions & { importacionId?: string }): Promise<Page<StoredProduct>> {
+    const where = options.importacionId === undefined ? '' : ' WHERE importacion_id = $3::uuid';
+    const values: (number | string)[] = [options.limit, options.offset];
+    if (options.importacionId !== undefined) values.push(options.importacionId);
+    try {
+      const result = await this.pool.query<Counted<StoredProduct>>(
+        'SELECT p.id, p.sku, p.nombre, p.precio_centimos, p.stock, p.importacion_id, totals.total ' +
+        'FROM (SELECT count(*) AS total FROM productos' + where + ') totals ' +
+        'LEFT JOIN LATERAL (SELECT id, sku, nombre, precio_centimos, stock, importacion_id FROM productos' + where +
+        ' ORDER BY sku ASC LIMIT $1 OFFSET $2) p ON true ORDER BY p.sku ASC', values,
+      );
+      const items: StoredProduct[] = [];
+      for (const row of result.rows) {
+        if (row.id !== null) items.push({ id: row.id, sku: row.sku, nombre: row.nombre,
+          precio_centimos: row.precio_centimos, stock: row.stock, importacion_id: row.importacion_id });
+      }
+      return { items, total: totalAsNumber(result.rows[0].total) };
+    } catch (error) { throw persistenceError(error); }
+  }
+
+  async listImports(options: PageOptions): Promise<Page<ImportSummary>> {
+    try {
+      const result = await this.pool.query<Counted<ImportSummary>>(
+        'SELECT i.id, i.version_contrato, i.productos_importados, i.creada_en, totals.total ' +
+        'FROM (SELECT count(*) AS total FROM importaciones) totals ' +
+        'LEFT JOIN LATERAL (SELECT id, version_contrato, productos_importados, creada_en FROM importaciones ' +
+        'ORDER BY creada_en DESC, id DESC LIMIT $1 OFFSET $2) i ON true ' +
+        'ORDER BY i.creada_en DESC, i.id DESC', [options.limit, options.offset],
+      );
+      const items: ImportSummary[] = [];
+      for (const row of result.rows) {
+        if (row.id !== null) items.push({ id: row.id, version_contrato: row.version_contrato,
+          productos_importados: row.productos_importados, creada_en: row.creada_en });
+      }
+      return { items, total: totalAsNumber(result.rows[0].total) };
+    } catch (error) { throw persistenceError(error); }
   }
 
   /** Consulta en bloque; los límites de detalle y el orden de filas pertenecen al servicio. */

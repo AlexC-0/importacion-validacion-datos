@@ -170,6 +170,7 @@ obtienen 201/409 sin productos parciales. Se comprueba rollback tras una inserci
 y pérdida de respuesta después de un COMMIT real, inyectada en el driver.
 No equivale a cortar físicamente la red ni a una prueba de carga.
 
-Resultados y demostración real en [STATUS](STATUS.md). Siguen pendientes las rutas
-de consulta de productos e importaciones. No hay frontend, autenticación,
+Resultados y demostración real en [STATUS](STATUS.md). La sesión 07 está publicada
+en 96a9ae0. La sesión 08 incorpora las [consultas HTTP](HTTP_CONSULTAS.md) de
+productos e importaciones. No hay frontend, autenticación,
 integraciones externas, colas, upsert ni despliegue.

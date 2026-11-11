@@ -259,6 +259,33 @@ después de un COMMIT ejecutado realmente en PostgreSQL, incluyendo fallo de la
 consulta de recuperación y reintento posterior. No es una prueba de partición
 física de red ni de caída del sistema operativo.
 
+## Consultas paginadas — sesión 08
+
+ImportRepository añade listProducts({limit, offset, importacionId?}) y
+listImports({limit, offset}), reutilizados por las nuevas rutas HTTP. El detalle
+reutiliza findImportById. No hay nuevos pools por petición ni cambios de esquema.
+
+Cada listado utiliza una sentencia SELECT con count(*) y LEFT JOIN LATERAL
+sobre la página: ambos ven la misma instantánea; si la página está vacía,
+el total se conserva y la fila nula de unión no se publica como producto/importación.
+Solo se seleccionan las columnas necesarias, y filtro, limit y offset se
+pasan como parámetros. No hay interpolación de valores de usuario en SQL.
+
+Productos: ORDER BY sku ASC con collation C existente. Importaciones:
+ORDER BY creada_en DESC, id DESC. El total bigint se convierte únicamente
+si cabe en un entero JSON seguro; de otro modo falla de forma controlada.
+La ordenación usa la precisión PostgreSQL; las fechas HTTP se serializan UTC
+con milisegundos. No se añade estado: las tablas solo contienen importaciones
+completadas visibles después de COMMIT.
+
+Las nuevas pruebas ejecutan las rutas con default_transaction_read_only=on
+y comparan todas las filas y sus versiones xmin antes/después. Se verifica
+que una transacción pendiente no aparece y que commit/rollback se reflejan
+sin filas parciales. Los cambios de fechas para probar desempates pertenecen
+exclusivamente a la preparación de datos de prueba en esquemas propios.
+
+Contrato y limitaciones de OFFSET en [HTTP_CONSULTAS](HTTP_CONSULTAS.md).
+
 ## Pruebas
 
 ~~~powershell
@@ -268,9 +295,10 @@ npm run build
 npm run test:integration
 ~~~
 
-npm test ejecuta 274 casos: 190 CSV/health, 34 del servicio y errores técnicos,
-y 50 HTTP/streams, sin requerir base de datos. La integración ejecuta 74 casos
-reales: 45 de persistencia, 18 de coordinación y 11 de HTTP, con migración desde cero,
+npm test ejecuta 363 casos: los 274 de sesiones anteriores y 89 de parámetros
+/HTTP de lectura, sin requerir base de datos. La integración ejecuta 88 casos
+reales: 45 de persistencia, 18 de coordinación, 11 de importación HTTP y 14 de
+consultas HTTP, con migración desde cero,
 reaplicación, rechazo de esquemas ajenos e historial alterado, inserción desde
 CSV, exactitud de céntimos, Unicode, consultas, claves, rangos, unicidad,
 rollback sin residuos y cierre/reutilización de conexiones.

@@ -467,7 +467,7 @@ Las reglas anteriores siguen aprobadas. Avance de implementación:
   persistencia transaccional y consultas internas.
 - Sesión 06 publicada en `f4b63e3`: servicio que coordina validación, huella,
   conflictos y creación, con recuperación tras unicidad y pruebas independientes.
-- Sesión 07: recepción multipart y traducción a HTTP, límites y gestión de streams;
+- Sesión 07 publicada en `96a9ae0`: recepción multipart y traducción a HTTP, límites y gestión de streams;
   pruebas HTTP de atomicidad, idempotencia y concurrencia.
 
 La estrategia, los resultados tipados, los límites de espera y la incertidumbre
@@ -476,9 +476,11 @@ Si una recuperación después de un COMMIT incierto no puede demostrar el
 resultado, se devuelve error técnico controlado; un reintento posterior puede
 resolverlo por la misma huella. No se afirma éxito sin evidencia.
 
+Las rutas y el contrato de lectura se implementan en la sesión 08 y se documentan
+en [HTTP_CONSULTAS](HTTP_CONSULTAS.md), sin alterar D01–D10.
+
 Quedan pendientes:
 
-- Rutas y contratos de consulta HTTP de productos e importaciones.
 - Evaluación de límites con pruebas de carga y pruebas de fallos físicos de red.
 
 Las reglas, la tabla D01–D10 y los ejemplos de las secciones anteriores se
