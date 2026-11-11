@@ -36,9 +36,11 @@ validación, persistencia e idempotencia con las respuestas aprobadas.
 La sesión 08 está publicada en `cb4e48c` y añade `GET /productos`,
 `GET /importaciones` y su detalle por UUID,
 con paginación y consultas de solo lectura. `GET /health` conserva su comportamiento.
-La sesión 09 prepara la candidata V1: aceptación del servidor compilado,
-corrección de indisponibilidad PostgreSQL y CI. Las 453 pruebas pasan localmente;
-la ejecución remota de Actions sigue pendiente de publicación manual.
+La sesión 09, publicada en `61eff54`, prepara la candidata V1: aceptación
+del servidor compilado, corrección de indisponibilidad PostgreSQL y CI.
+La primera CI falló por la expansión del glob de exclusión de pruebas.
+La sesión 09.1 corrige test y test:watch; las 453 pruebas pasan localmente.
+Falta publicar la corrección y comprobar una nueva ejecución remota.
 Consulta la [guía de validación V1](docs/VALIDACION_V1.md).
 No hay despliegue ni cierre definitivo de V1.
 
@@ -370,8 +372,8 @@ en castellano y una Description fiel al trabajo realizado; tiene prohibido
 ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
 no modifique expresamente esta norma.
 
-La sesión 08 está publicada en `cb4e48c`. La sesión 09 queda local,
-pendiente de revisión, commit y push manuales.
+La sesión 09 está publicada en `61eff54`. La corrección de CI de la
+sesión 09.1 queda pendiente de revisión, commit y push manuales.
 
 Próximo paso: publicar manualmente y revisar la ejecución de GitHub Actions
 para ese commit. Solo después podrá registrarse el cierre de V1.

@@ -23,8 +23,10 @@ Fecha de actualización: 11 de noviembre de 2026.
 - Sesión 08 publicada por Alex: `cb4e48c`
   (`cb4e48c5f4956c5d2584c461c2ce4aece2cb8082`).
 - Al iniciar la sesión 09, main, origin/main y GitHub coincidían en cb4e48c;
-  no había cambios pendientes. La sesión 09 queda local, sin staging,
-  para revisión, commit y push manuales. CI remota aún no ejecutada.
+  no había cambios pendientes. La sesión 09 se entregó sin staging y Alex
+  la publicó en `61eff54` (`61eff54655ec365f177fc109ebef60ff44b6f84b`).
+- Al iniciar la sesión 09.1, main y origin/main coinciden en 61eff54, sin cambios
+  pendientes. La primera CI falló en npm test; la corrección 09.1 queda local.
 - Versión del proyecto en `package.json`: `0.1.0`.
 - La API no está desplegada. Publicar código en GitHub no inicia un servicio.
 
@@ -624,9 +626,10 @@ Se activa por push a main o manualmente. Permisos contents: read, checkout
 sin persistir credenciales y contraseña desechable del servicio de CI.
 Acciones oficiales fijadas por SHA: checkout v7.0.1 y setup-node v7.1.0.
 
-Revisión estática de estructura, comandos, permisos, base y variables, sin
-linter YAML externo ni ejecución del runner. **GitHub Actions aún no se ha
-verificado remotamente. V1 no está cerrada definitivamente.**
+Al entregar la sesión 09 se realizó revisión estática de estructura, comandos,
+permisos, base y variables, sin linter YAML externo ni ejecución del runner.
+La primera ejecución remota posterior falló, como registra la sesión 09.1.
+**V1 no está cerrada definitivamente.**
 No se cambian package.json, lock ni migraciones; no hay nuevas dependencias.
 
 Revisión final: git diff --check correcto, 42 enlaces locales (incluidas anclas),
@@ -640,10 +643,74 @@ conserva cero importaciones y cero productos; cero esquemas temporales y cero
 conexiones de aceptación. Base/carpeta de reproducción eliminadas y sin
 procesos de API de prueba residuales. No se detuvo la instancia existente.
 
-main conserva cb4e48c. No hay staging, commit, push, ramas nuevas, tags,
-releases ni despliegue. Alex revisará y publicará desde GitHub Desktop.
+Al entregar la sesión 09, main conservaba cb4e48c, sin staging, commit, push,
+ramas nuevas, tags, releases ni despliegue por parte de Codex. Alex publicó
+posteriormente los cambios en 61eff54 desde GitHub Desktop.
 La guía [VALIDACION_V1](VALIDACION_V1.md) reúne instalación Windows/Linux,
 configuración, migraciones, pruebas, ejemplos, errores y limitaciones.
+
+## Sesión 09.1 — Corrección de la selección de pruebas en CI
+
+### Causa verificada
+
+Se consultaron los pasos y logs del job 130792950708 de la
+[primera ejecución de CI](https://github.com/AlexC-0/importacion-validacion-datos/actions/runs/43101238510),
+correspondiente a 61eff54. Instalación y typecheck correctos; npm test falló.
+Build, migraciones e integración quedaron sin ejecutar por ese fallo.
+
+El comando era vitest run --exclude tests/integration/**. Los logs muestran
+cuatro suites de tests/integration cargadas y el error de configuración ausente
+TEST_DATABASE_URL; no llegaron a ejecutarse casos de prueba.
+
+Git Bash local reprodujo la expansión: el glob sin comillas se convirtió en
+cinco rutas. La primera, acceptance.test.ts, ocupó el argumento de --exclude;
+las otras cuatro quedaron como filtros de ejecución. Esto explica tanto las
+cuatro suites fallidas como la ausencia de las nueve suites normales en CI.
+No faltaba una variable en el workflow: integración no debía cargarse en ese paso.
+
+### Corrección mínima
+
+package.json entrecomilla tests/integration/** en test y test:watch, escapando
+las comillas dobles en JSON. Vitest recibe un solo patrón literal y excluye
+la carpeta completa. test:integration y ci.yml permanecen intactos.
+No se añaden dependencias, pruebas, exclusiones adicionales ni cambios de API.
+
+### Comprobaciones locales ejecutadas
+
+| Comprobación | Resultado |
+| --- | --- |
+| npm run typecheck | Correcto |
+| npm test | 364 pruebas en 9 archivos; ninguna suite de integración |
+| npm run build | Correcto |
+| npm run test | 364 pruebas en los mismos 9 archivos |
+| npm run test:integration | 89 pruebas reales en los 5 archivos de integración |
+| Git Bash: argumentos de test y test:watch | Un argumento literal tests/integration/** después de --exclude |
+| npm test con Git Bash como script-shell | 364 pruebas / 9 archivos, sin variables PostgreSQL; cero archivos de integración |
+| npm run test:watch -- --run con ese script-shell | 364 pruebas / 9 archivos, sin variables PostgreSQL; cero archivos de integración |
+
+npm test y npm run test son equivalentes; ninguno debe cargar integración.
+El comando que ejecuta las 89 pruebas PostgreSQL es npm run test:integration.
+La opción --run permitió comprobar test:watch sin dejar un observador activo.
+Se contrastaron los nombres de los nueve archivos mediante la salida detallada.
+
+Las 453 pruebas existentes se conservan y pasan, incluyendo health, endpoints,
+concurrencia, rollback y aceptación del proceso compilado. Las repeticiones
+anteriores no son casos adicionales. Tipos y compilación correctos.
+Git Bash está instalado en Windows: esta evidencia no sustituye un runner Linux.
+No se instaló software ni se reinicializó PostgreSQL.
+
+Se revisó el orden del workflow: npm ci, typecheck, npm test, build,
+migración/reaplicación e integración con TEST_DATABASE_URL solo en su paso.
+No se proporcionan credenciales de base al paso de pruebas normales para ocultar
+el fallo. Código, contratos D01–D10, pruebas, lock y migraciones sin cambios.
+
+### Estado y nueva comprobación remota pendiente
+
+README, PROJECT_BRIEF y VALIDACION_V1 registran la publicación de la sesión 09
+y el fallo inicial. Esta corrección queda sin staging, commit ni push en main,
+sobre 61eff54. Alex debe revisarla y publicarla mediante GitHub Desktop.
+Después se comprobará una nueva ejecución asociada al nuevo commit; repetir
+la ejecución de 61eff54 no incorporaría estos cambios. V1 permanece abierta.
 
 ## Limitaciones y siguiente sesión
 
@@ -659,7 +726,7 @@ frontend, autenticación ni despliegue.
 La cobertura de COMMIT incierto sigue usando fallos inyectados en el driver;
 no es una prueba de corte físico de red. No quedan bloqueos de implementación.
 
-Siguiente paso: revisión y publicación manual de la sesión 09; después,
-verificar en GitHub Actions la ejecución del commit exacto en main y registrar
+Siguiente paso: revisión y publicación manual de la corrección 09.1; después,
+verificar en GitHub Actions la ejecución del nuevo commit en main y registrar
 su URL/resultado. Solo con esa evidencia podrá declararse cerrada V1.
 Las pruebas de carga y fallos físicos de red siguen fuera de esta entrega.

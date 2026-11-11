@@ -1,8 +1,10 @@
 # Validación de la versión candidata V1 — sesión 09
 
-Estado a 11 de noviembre de 2026: candidata comprobada localmente; **V1 no está
-cerrada definitivamente**. Falta que Alex publique estos cambios y revisar la
-ejecución de GitHub Actions correspondiente a ese commit.
+Estado tras la sesión 09.1: la sesión 09 está publicada en `61eff54`.
+La [primera ejecución de CI](https://github.com/AlexC-0/importacion-validacion-datos/actions/runs/43101238510)
+falló en npm test por la expansión del glob de exclusión. La corrección local
+entrecomilla ese patrón en test y test:watch; falta publicarla y revisar una
+nueva ejecución remota. **V1 no está cerrada definitivamente**.
 
 La sesión 08 está publicada en `cb4e48c`. Las reglas de
 [CONTRATO_CSV](CONTRATO_CSV.md), [HTTP_IMPORTACIONES](HTTP_IMPORTACIONES.md) y
@@ -11,7 +13,8 @@ No se añaden funcionalidades ni se cambian D01–D10.
 
 ## Matriz de aceptación
 
-Todas las suites citadas se ejecutaron en esta sesión, sin omisiones.
+Todas las suites citadas se ejecutaron en la sesión 09 y se han vuelto a
+comprobar en la sesión 09.1, sin omisiones.
 Las rutas de pruebas son relativas a la raíz del repositorio.
 
 | Área | Criterio y evidencia principal | Resultado local |
@@ -135,7 +138,7 @@ Consulta `/importaciones/<UUID>` y
 Detén la API con Ctrl+C. Los formatos completos y ejemplos de errores están
 en los contratos HTTP enlazados al comienzo.
 
-## Resultados reproducidos en esta sesión
+## Resultados reproducidos en la sesión 09
 
 | Comprobación | Proyecto principal | Copia limpia temporal |
 | --- | --- | --- |
@@ -181,9 +184,35 @@ Referencias: [checkout](https://github.com/actions/checkout/releases),
 [setup-node](https://github.com/actions/setup-node/releases) y
 [servicios PostgreSQL en Actions](https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers).
 
-Revisión local estática de estructura YAML, comandos, versiones, permisos,
-variables, nombre de base y aislamiento. No se ha ejecutado un linter YAML
-externo ni el runner de GitHub; no se afirma validación remota.
+La revisión de la sesión 09 fue estática, sin linter YAML externo. Después de
+publicar 61eff54, el runner superó instalación y tipos, pero falló en npm test;
+no alcanzó build, migraciones ni integración. Los logs se revisaron en 09.1.
+
+### Corrección de selección — sesión 09.1
+
+El glob sin comillas se expandía a nombres de archivo antes de llegar a Vitest:
+se excluía acceptance.test.ts y se seleccionaban otras cuatro suites de
+integración, que fallaban al faltar TEST_DATABASE_URL en el paso normal.
+La corrección conserva el patrón y añade comillas escapadas en package.json:
+
+~~~json
+{
+  "test": "vitest run --exclude \"tests/integration/**\"",
+  "test:watch": "vitest --exclude \"tests/integration/**\""
+}
+~~~
+
+Es un extracto de scripts. test:integration no cambia. npm test y npm run test
+son equivalentes: ambos deben ejecutar solo las 364 pruebas normales.
+Las 89 pruebas PostgreSQL se ejecutan con npm run test:integration tras build.
+
+En 09.1 pasaron typecheck, npm test, build, npm run test e integración.
+Git Bash sobre Windows confirmó la expansión anterior y el patrón literal
+corregido; con ese shell, test y test:watch --run ejecutaron los nueve archivos
+normales y cero de integración, sin variables de base de datos.
+No se añadieron ni eliminaron pruebas: siguen siendo 453 casos.
+El workflow conserva su orden y variables. Falta verificar el nuevo commit en
+GitHub Actions; la comprobación local de Bash no equivale a ejecutar Ubuntu.
 
 ## Errores habituales y limitaciones
 
@@ -206,7 +235,7 @@ externo ni el runner de GitHub; no se afirma validación remota.
 
 ## Pasos pendientes para cerrar V1
 
-1. Alex revisa el diff, confirma y publica desde GitHub Desktop.
+1. Alex revisa la corrección 09.1, confirma y publica desde GitHub Desktop.
 2. Revisar en Actions la ejecución de **ese commit** en main: instalación,
    tipos, 364 pruebas, build, migraciones y 89 pruebas reales, sin omisiones.
 3. Si falla, conservar la evidencia, corregir el defecto y repetir tras otra

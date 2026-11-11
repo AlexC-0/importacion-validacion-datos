@@ -135,11 +135,14 @@ Contrato: [HTTP_CONSULTAS](HTTP_CONSULTAS.md). Alex publicó esta entrega en
 - 453 pruebas correctas, tipos y build, también desde una copia limpia.
 - Migración y reaplicación en una base temporal nueva; HTTP real y limpieza.
 - Workflow Linux con Node.js 24/PostgreSQL 18, credenciales desechables y
-  permisos de lectura, pendiente de publicación y ejecución remota.
+  permisos de lectura; publicado en 61eff54, con primera ejecución fallida.
 - Sin nuevas funcionalidades, dependencias, tablas ni cambios de D01–D10.
 
-Evidencia y pasos: [VALIDACION_V1](VALIDACION_V1.md). Los cambios quedan locales
-para revisión, commit y push manuales. V1 no se declara cerrada hasta revisar CI.
+Evidencia y pasos: [VALIDACION_V1](VALIDACION_V1.md). Alex publicó la sesión 09
+en 61eff54. La sesión 09.1 corrige la expansión del glob en test y test:watch
+que hizo fallar npm test en la primera CI. Las 453 pruebas pasan localmente;
+la corrección queda pendiente de publicación y nueva verificación remota.
+V1 no se declara cerrada hasta revisar una ejecución completa correcta.
 
 ## Exclusiones
 
