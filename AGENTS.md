@@ -3,12 +3,15 @@
 ## Alcance y forma de trabajo
 
 - Lee `README.md`, `docs/PROJECT_BRIEF.md` y `docs/STATUS.md` antes de modificar.
+  Si el encargo afecta a la importación, lee también `docs/CONTRATO_CSV.md`.
 - Inspecciona primero la ruta, `git status --short --branch`, la rama y los remotos.
 - Trabaja exclusivamente dentro de este proyecto independiente. No modifiques
   archivos, historial ni remotos de otros proyectos.
-- Respeta la sesión y el alcance autorizados. La sesión 01 incluye solo la base
-  técnica, `GET /health`, su prueba y documentación. No implementes todavía CSV
-  ni PostgreSQL.
+- Respeta la sesión y el alcance autorizados. La sesión 02 es documental:
+  actualizar el estado y proponer el contrato CSV. No implementes importación,
+  procesamiento de archivos, tablas PostgreSQL ni cambios en la API durante ella.
+- Las restricciones del contrato CSV son propuestas hasta que el usuario las
+  apruebe expresamente. No conviertas ejemplos o alternativas en requisitos finales.
 - Mantén cambios pequeños, comprensibles y enfocados en una funcionalidad verificable.
 - Conserva los cambios existentes del usuario; no los sobrescribas ni reviertas
   sin autorización.
@@ -21,23 +24,49 @@
 
 ## Comprobaciones
 
-- Usa `npm ci` para instalar las versiones fijadas en `package-lock.json`.
+- Usa `npm ci` cuando sea necesario instalar las versiones de `package-lock.json`.
 - Ante cambios de código, ejecuta `npm run typecheck`, `npm test` y
-  `npm run build`. Ajusta la verificación al alcance de cambios documentales.
+  `npm run build`. Para cambios solo documentales, revisa el diff, enlaces,
+  ejemplos y coherencia; no presentes resultados históricos como pruebas nuevas.
 - Para cambios en el arranque, comprueba también una petición real a `/health`.
-- Añade o modifica pruebas que verifiquen comportamiento observable.
+- Añade o modifica pruebas que verifiquen comportamiento observable cuando proceda.
 - Actualiza `docs/STATUS.md` con resultados reales, bloqueos y siguiente paso.
 - No declares comprobaciones correctas si no se han ejecutado.
 
-## Git, configuración y publicación
+## Norma permanente: commits y push manuales
 
-- Usa `main` como rama principal y commits descriptivos.
-- Antes de cada commit, revisa el diff preparado y los archivos que se incluirán.
-- Versiona `package-lock.json`. Excluye dependencias, `dist/`, cobertura,
-  logs, `.env` y credenciales; usa solo valores de ejemplo en `.env.example`.
+**Todos los commits y push serán realizados exclusivamente por el usuario
+desde GitHub Desktop.**
+
+- Codex tiene prohibido ejecutar `git commit`, `git push` o acciones equivalentes,
+  incluidas operaciones mediante otras herramientas, API, automatizaciones o la
+  interfaz de GitHub Desktop, salvo que el usuario modifique expresamente esta norma.
+- Una petición genérica de terminar, guardar o publicar el trabajo no modifica
+  esta regla. No crees commits, no reescribas commits existentes ni publiques cambios.
+- Codex puede inspeccionar Git, implementar código dentro del alcance autorizado,
+  ejecutar pruebas, preparar documentación y proponer mensajes de commit.
+- Deja los cambios locales para que el usuario los revise, seleccione y confirme
+  en GitHub Desktop. No prepares archivos en staging salvo petición expresa.
+- Mantén `main` como rama principal y comprueba que `origin` corresponde a
+  `AlexC-0/importacion-validacion-datos`.
+- Antes de entregar, revisa el diff y enumera los archivos modificados o creados.
+
+## Entrega obligatoria cuando haya modificaciones
+
+Incluye siempre:
+
+1. Resumen fiel de los cambios realizados.
+2. Pruebas y comprobaciones ejecutadas, sus resultados y las que no procedan.
+3. Propuesta de Summary en castellano para GitHub Desktop.
+4. Propuesta de Description fiel al trabajo realizado.
+5. Indicación explícita de que el commit y el push quedan pendientes de la
+   intervención manual del usuario desde GitHub Desktop.
+
+## Configuración y alcance de publicación
+
+- Conserva `package-lock.json` en el repositorio. Excluye dependencias, `dist/`,
+  cobertura, logs, `.env` y credenciales; usa solo ejemplos en `.env.example`.
 - No muestres ni guardes secretos en Git, documentación, pruebas o salida de consola.
-- Comprueba identidad autenticada y ausencia de un repositorio homónimo antes
-  de crear el remoto.
-- La creación remota inicial requiere confirmación explícita del usuario sobre
-  cuenta, nombre y visibilidad. No repitas una confirmación ya concedida.
-- Publica únicamente commits comprobados y autorizados. No despliegues la aplicación.
+- El repositorio público ya existe. No crees otro remoto ni cambies su visibilidad
+  como parte de una actualización de documentación.
+- No despliegues la aplicación.

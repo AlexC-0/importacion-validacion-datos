@@ -33,15 +33,25 @@ Una importación inválida no debe dejar productos parcialmente guardados.
 El diseño del registro de intentos fallidos se decidirá junto con el modelo
 de datos; no se presupone un esquema en esta sesión.
 
-## Alcance de la sesión 01
+## Sesión 01 — Completada
 
-- Crear una carpeta y un repositorio Git independientes.
-- Configurar Node.js, TypeScript, Express, Vitest y Supertest.
-- Implementar `GET /health` y su prueba.
-- Incorporar scripts de desarrollo, tipos, compilación y testing.
-- Preparar documentación, reglas operativas y exclusiones de Git.
-- Verificar la base técnica y crear un commit inicial.
-- Preparar GitHub; crear y publicar el remoto solo tras confirmación expresa.
+Se creó la base independiente con Node.js, TypeScript, Express, Vitest y
+Supertest, `GET /health`, su prueba, scripts y documentación inicial.
+El commit `852e829` está publicado en `main` en el repositorio público
+[AlexC-0/importacion-validacion-datos](https://github.com/AlexC-0/importacion-validacion-datos).
+La API no está desplegada.
+
+## Alcance de la sesión 02
+
+- Actualizar la documentación para reflejar el estado publicado.
+- Establecer que todos los commits y push los realiza exclusivamente el usuario
+  desde GitHub Desktop; Codex tiene prohibido ejecutarlos o usar acciones equivalentes.
+- Preparar [CONTRATO_CSV.md](CONTRATO_CSV.md) como propuesta pendiente de aprobación
+  para `sku,nombre,precio_eur,stock`.
+- Documentar normalización, validaciones, errores, duplicados, límites,
+  transacciones, reintentos y ejemplos para futuras pruebas.
+- Mantener intactos el código, las dependencias y el comportamiento actual.
+- Dejar los cambios sin confirmar para revisión, commit y push manuales.
 
 ## Exclusiones
 
@@ -51,14 +61,15 @@ de datos; no se presupone un esquema en esta sesión.
 - Microservicios y arquitectura distribuida.
 - Despliegue del servicio.
 - Sustituir PostgreSQL por MySQL o usar PHP/Apache como servidor de esta API.
-- Implementar importación, persistencia o consultas funcionales durante la sesión 01.
+- Implementar importación, persistencia o consultas funcionales durante las sesiones 01 y 02.
 
 ## Decisiones pendientes
 
-Antes de implementar la importación se concretarán: columnas y tipos de datos
-del CSV, campos obligatorios, clave única de producto, reglas de duplicados,
-codificación y delimitador, límites de archivo, numeración de filas, formato de
-errores y contrato de respuestas HTTP.
+El formato de partida de la propuesta es `sku,nombre,precio_eur,stock`.
+Antes de implementar se revisarán y aprobarán las decisiones de
+[CONTRATO_CSV.md](CONTRATO_CSV.md): tipos y límites, normalización, duplicados,
+conflictos con productos existentes, codificación, numeración de filas,
+errores y respuestas HTTP. Las propuestas no equivalen a reglas aprobadas.
 
 También se definirá cómo identificar una importación repetida, qué ocurre ante
 solicitudes concurrentes y cómo consultar estados y resultados. PostgreSQL se
@@ -83,3 +94,10 @@ Carpeta independiente, proyecto anterior intacto, dependencias instalables,
 TypeScript compilable, `GET /health` operativo y probado, documentación coherente
 y commit inicial revisado. El estado de GitHub debe indicarse con exactitud,
 incluida cualquier confirmación o acción pendiente.
+
+## Criterios de cierre de la sesión 02
+
+Documentación coherente con GitHub, norma permanente de commits y push manuales
+sin instrucciones contradictorias, y contrato CSV marcado como propuesta con
+decisiones abiertas y casos verificables. Los cambios quedan sin confirmar;
+no se implementan endpoints adicionales ni persistencia.

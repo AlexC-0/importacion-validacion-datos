@@ -5,8 +5,15 @@ archivos CSV, validar los datos y guardar importaciones válidas en PostgreSQL.
 
 ## Estado actual
 
-Sesión 01: base técnica local con Express y TypeScript, endpoint `GET /health`,
-prueba automatizada con Vitest y Supertest y documentación inicial.
+La base de la sesión 01 está publicada en el repositorio público
+[AlexC-0/importacion-validacion-datos](https://github.com/AlexC-0/importacion-validacion-datos),
+en la rama principal `main`, con el commit inicial `852e829`.
+La versión actual del proyecto en `package.json` es `0.1.0`.
+
+Está preparada la API con Express y TypeScript, el endpoint `GET /health`
+y su prueba con Vitest y Supertest. La sesión 02 actualiza la documentación y
+añade una [propuesta de contrato CSV](docs/CONTRATO_CSV.md), pendiente de revisión
+y aprobación antes de implementar sus reglas.
 
 Todavía no se han implementado la base de datos, la importación CSV ni las
 consultas de productos e importaciones. No hay despliegue.
@@ -97,6 +104,7 @@ tests/
 docs/
   PROJECT_BRIEF.md        # Alcance y criterios de finalización
   STATUS.md               # Estado real y siguiente paso
+  CONTRATO_CSV.md         # Propuesta técnica pendiente de aprobación
 AGENTS.md                 # Instrucciones operativas para Codex
 .env.example              # Configuración local de ejemplo
 package.json
@@ -110,6 +118,12 @@ tsconfig.build.json
 Consulta [el alcance](docs/PROJECT_BRIEF.md), [el estado](docs/STATUS.md) y
 [las instrucciones operativas](AGENTS.md) antes de continuar.
 
-La sesión 01 termina con esta base comprobada y su commit inicial.
-La creación de un repositorio público en GitHub exige confirmar expresamente
-cuenta, nombre y visibilidad. Publicar el código no despliega el servicio.
+Todos los commits y push los realiza exclusivamente el usuario desde GitHub
+Desktop. Codex deja los cambios locales para revisión y propone un Summary
+en castellano y una Description fiel al trabajo realizado; tiene prohibido
+ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
+no modifique expresamente esta norma.
+
+El código está publicado en GitHub; la API no está desplegada. El siguiente
+paso es revisar las decisiones abiertas de `docs/CONTRATO_CSV.md`.
+La documentación de la sesión 02 debe confirmarse y subirse manualmente.
