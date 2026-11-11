@@ -7,10 +7,10 @@
 - Inspecciona primero la ruta, `git status --short --branch`, la rama y los remotos.
 - Trabaja exclusivamente dentro de este proyecto independiente. No modifiques
   archivos, historial ni remotos de otros proyectos.
-- La sesión 06 autoriza un servicio de importación, resolución de reintentos,
-  conflictos y concurrencia, con pruebas unitarias y PostgreSQL real.
-- No añadas rutas ni multipart. Los resultados de dominio se adaptarán a HTTP
-  posteriormente. No alteres D01–D10 ni migraciones ya publicadas.
+- La sesión 07 autoriza POST /importaciones, recepción multipart acotada,
+  adaptación HTTP del servicio existente, ciclo de vida del pool y pruebas.
+- No añadas consultas HTTP, frontend, autenticación ni despliegue.
+  No alteres D01–D10 ni migraciones ya publicadas.
 - Usa la instancia PostgreSQL existente, comprobando su estado antes de arrancarla;
   no reinstales PostgreSQL ni reinicialices el cluster.
 - Antes de instalar software o iniciar servicios nuevos, solicita autorización.

@@ -99,7 +99,19 @@ funcional de respuestas 200/201/409 durante la sesión 05.
   controlados, conservando las suites anteriores.
 - Sin cambios de esquema, dependencias, rutas ni infraestructura.
 
-Los cambios de sesión 06 quedan locales para revisión y publicación manual.
+Alex publicó la sesión 06 en `f4b63e3`, verificado al iniciar la sesión 07.
+
+## Sesión 07 — Integración HTTP de importaciones
+
+- `POST /importaciones` recibe un archivo multipart en el campo `archivo`.
+- Límites de bytes originales y cuerpo completo, tipos MIME y charset UTF-8.
+- Adaptador HTTP sobre el servicio existente, sin duplicar reglas CSV ni SQL.
+- Respuestas 201/200/400/413/415/422/409/500/503 y errores sin información interna.
+- Pool compartido por proceso, inyección para pruebas y cierre al detener la API.
+- Pruebas HTTP y PostgreSQL real, incluidas concurrencia e incertidumbre de COMMIT.
+- `GET /health` preservado; sin cambios en D01–D10 ni migraciones publicadas.
+
+La entrega queda local para revisión, commit y push manuales por Alex.
 
 ## Exclusiones
 
@@ -121,7 +133,8 @@ errores y respuestas HTTP. No quedan decisiones D01–D10 pendientes de aprobaci
 El parsing y la validación en memoria están implementados en `src/csv/`.
 La sesión 05 añade persistencia con UUID, precios enteros, relaciones y consultas
 internas. La sesión 06 coordina reintentos y conflictos bajo concurrencia.
-Quedan recepción multipart y contratos de consulta HTTP. Los límites aprobados de V1 se
+La sesión 07 añade recepción multipart y respuestas HTTP de importación.
+Quedan los contratos y rutas de consulta HTTP. Los límites aprobados de V1 se
 evaluarán con futuras pruebas de carga; no se modifican en esta sesión.
 
 ## Criterios de finalización de la primera versión
@@ -188,6 +201,13 @@ técnico; huella de bytes originales, prioridad de repetición exacta, atomicida
 y unicidad verificadas con conexiones PostgreSQL independientes.
 La incertidumbre de COMMIT se representa sin afirmar éxito ni rollback no probado.
 
-Próximo paso recomendado: recepción multipart y traducción a respuestas HTTP
-mediante `POST /importaciones`, con pruebas de límites y del contrato.
-Requiere autorización expresa y no se implementa en esta sesión.
+La sesión 06 está publicada en `f4b63e3`; sus resultados son históricos.
+
+## Criterios de cierre de la sesión 07
+
+Recepción multipart acotada, contrato HTTP completo y reutilización del servicio.
+Pruebas de límites, errores, atomicidad y concurrencia; arranque y petición real.
+Tipos, pruebas y compilación correctos; documentación y cambios sin staging.
+
+Próximo paso recomendado: diseñar e implementar las consultas HTTP de productos
+e importaciones, con paginación y pruebas, sin ampliar el alcance V1.

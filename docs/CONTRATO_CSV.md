@@ -3,7 +3,8 @@
 **Estado: D01–D10 aprobadas por Alex Cobián durante la sesión 03.**
 Fecha de aprobación y consolidación documental: 11 de noviembre de 2026.
 Identificador del contrato: `csv-v1`. Es una referencia contractual aprobada;
-no significa que la API de importación esté implementada ni desplegada.
+su aprobación se distingue del avance de implementación descrito en la sección 14.
+La API no está desplegada.
 
 ## 0. Reglas aprobadas y alcance de esta referencia
 
@@ -22,8 +23,9 @@ La aprobación del contrato no autoriza por sí sola implementar el importador.
 Estado de implementación: la sesión 04 incorporó validación CSV en memoria;
 la sesión 05 añade tablas PostgreSQL, persistencia transaccional y pruebas reales.
 La sesión 06 añade el servicio de coordinación, reintentos y conflictos, con
-pruebas de concurrencia. No hay recepción HTTP de archivos; `GET /health`
-permanece igual. Las reglas aprobadas no cambian.
+pruebas de concurrencia. La sesión 07 añade recepción multipart y respuestas HTTP
+mediante `POST /importaciones`; `GET /health` permanece igual. Las reglas aprobadas
+no cambian.
 
 ## 1. Codificación y delimitador aprobados — D01
 
@@ -309,7 +311,7 @@ futura, sin cambiar las garantías de unicidad, rollback y recuperación del res
 
 Ruta aprobada: `POST /importaciones`, con `multipart/form-data` y exactamente
 un archivo en el campo `archivo`; rechazar campos adicionales.
-No existe todavía esta ruta ni se modifica `GET /health`.
+Ruta implementada durante la sesión 07; `GET /health` conserva su comportamiento.
 
 Admitir el tipo de la parte `text/csv`, `application/octet-stream`
 o ausencia de tipo; si declara charset, exigir UTF-8. Otros tipos declarados
@@ -361,19 +363,20 @@ Ejemplo de reenvío de exactamente el mismo archivo — HTTP 200 OK:
 }
 ```
 
-El identificador de estos ejemplos es ilustrativo; su formato definitivo es un
-detalle de implementación pendiente. Los dos productos y la importación son los
+El identificador de estos ejemplos es ilustrativo; la implementación usa UUID,
+como se documenta en PERSISTENCIA. Los dos productos y la importación son los
 ya confirmados: el segundo ejemplo no representa nuevas escrituras.
 
 Las rutas de consulta de productos e importaciones y el formato de sus respuestas
-se diseñarán posteriormente; no se incorporan nuevos endpoints en esta sesión.
+se diseñarán posteriormente; no se incorporan rutas de consulta durante la sesión 07.
 
 ## 12. Ejemplos y casos para futuras pruebas
 
 Los siguientes casos expresan el contrato completo aprobado. Las pruebas de la
 sesión 04 cubren el contenido CSV y sus errores en memoria; la sesión 05
 añade pruebas de persistencia, restricciones y rollback. La sesión 06 verifica
-recuperación y coordinación concurrente. La exposición HTTP sigue pendiente.
+recuperación y coordinación concurrente. La sesión 07 verifica recepción multipart,
+límites y exposición HTTP, también con PostgreSQL real.
 
 ### Archivo válido
 
@@ -462,8 +465,10 @@ Las reglas anteriores siguen aprobadas. Avance de implementación:
 - Sesión 04 publicada en `b1cb2e2`: parsing y validación CSV en memoria.
 - Sesión 05 publicada en `59dbc42`: PostgreSQL, UUID, migración, restricciones,
   persistencia transaccional y consultas internas.
-- Sesión 06: servicio que coordina validación, huella, conflictos y creación,
-  con recuperación tras unicidad y pruebas con conexiones independientes.
+- Sesión 06 publicada en `f4b63e3`: servicio que coordina validación, huella,
+  conflictos y creación, con recuperación tras unicidad y pruebas independientes.
+- Sesión 07: recepción multipart y traducción a HTTP, límites y gestión de streams;
+  pruebas HTTP de atomicidad, idempotencia y concurrencia.
 
 La estrategia, los resultados tipados, los límites de espera y la incertidumbre
 de COMMIT se documentan en [PERSISTENCIA](PERSISTENCIA.md).
@@ -473,8 +478,6 @@ resolverlo por la misma huella. No se afirma éxito sin evidencia.
 
 Quedan pendientes:
 
-- Recepción multipart, gestión de recursos y límites HTTP.
-- Exposición HTTP de los resultados mediante las respuestas aprobadas.
 - Rutas y contratos de consulta HTTP de productos e importaciones.
 - Evaluación de límites con pruebas de carga y pruebas de fallos físicos de red.
 

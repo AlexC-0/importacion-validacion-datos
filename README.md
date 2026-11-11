@@ -18,8 +18,8 @@ Durante la sesión 03, Alex Cobián aprobó D01–D10 del
 [contrato CSV V1](docs/CONTRATO_CSV.md): una importación nueva confirmada devuelve
 201; el reenvío exacto recupera el resultado existente con 200, sin nuevas
 inserciones; otro archivo con SKU existentes devuelve 409.
-La sesión 03 está publicada en `47278b3`. Esas respuestas HTTP pertenecen a
-la futura importación persistida; todavía no existe `POST /importaciones`.
+La sesión 03 está publicada en `47278b3`. La sesión 07 implementa esas respuestas
+mediante `POST /importaciones`.
 
 La sesión 04 está publicada en `b1cb2e2` e incorpora un procesador CSV independiente de HTTP y persistencia.
 Valida los bytes originales, normaliza productos, detecta SKU duplicados dentro
@@ -28,17 +28,19 @@ del archivo y devuelve errores por fila y campo, sin productos parcialmente acep
 La sesión 05 está publicada en `59dbc42` e incorpora PostgreSQL local, migración del esquema y persistencia
 transaccional de importaciones y productos, con consultas internas y pruebas reales.
 
-La sesión 06 incorpora un servicio que coordina validación, huella de bytes,
+La sesión 06 está publicada en `f4b63e3` e incorpora un servicio que coordina validación, huella de bytes,
 creación transaccional, conflictos, reintentos y solicitudes concurrentes.
 
-Quedan pendientes recepción multipart y exposición mediante nuevas rutas HTTP.
-La API sigue exponiendo únicamente `GET /health`. No hay despliegue.
+La sesión 07 añade `POST /importaciones`: recepción multipart, límites de bytes,
+validación, persistencia e idempotencia con las respuestas aprobadas.
+`GET /health` conserva su comportamiento. Quedan pendientes las rutas de consulta.
+No hay despliegue.
 
 ## Tecnologías y requisitos
 
 - Node.js 24 LTS, versión 24.13.0 o superior dentro de la rama 24.
 - npm (comprobación inicial con 11.6.2).
-- TypeScript y Express.
+- TypeScript y Express; multiparty para recepción y content-type para cabeceras MIME.
 - Vitest y Supertest para pruebas; tsx para ejecutar TypeScript en desarrollo.
 - Git y GitHub para control de versiones.
 - PostgreSQL 18 y driver pg para persistencia; no se requieren para `/health` ni `npm test`.
@@ -91,7 +93,7 @@ Respuesta HTTP 200, con Content-Type JSON:
 { "status": "ok" }
 ```
 
-Este endpoint confirma que el proceso HTTP responde; todavía no comprueba
+Este endpoint confirma que el proceso HTTP responde; no comprueba
 conexión con una base de datos. El servidor escucha únicamente en
 `127.0.0.1` para trabajar en local. Si el puerto está ocupado, cambia `PORT`.
 
@@ -101,6 +103,28 @@ Para compilar y ejecutar JavaScript:
 npm run build
 npm start
 ```
+
+## Importar productos mediante HTTP
+
+Configura `DATABASE_URL` en el entorno local, comprueba la instancia PostgreSQL
+existente con `npm run db:local -- -Action Status` y aplica `npm run db:migrate`
+si corresponde. El arranque de la API no crea ni modifica tablas automáticamente.
+
+Con un archivo UTF-8 que respete la cabecera `sku,nombre,precio_eur,stock`:
+
+~~~powershell
+curl.exe -i -F "archivo=@productos.csv;type=text/csv" http://127.0.0.1:3000/importaciones
+~~~
+
+Una nueva importación confirmada devuelve 201. Reenviar exactamente los mismos
+bytes devuelve 200 con el identificador y cantidad originales. Otro archivo con
+SKU existentes devuelve 409 sin inserciones parciales.
+
+Consulta [HTTP_IMPORTACIONES](docs/HTTP_IMPORTACIONES.md) para ejemplos, errores,
+límites, mecanismo multipart y ciclo de vida del servidor. Sin `DATABASE_URL`,
+health sigue operativo; un CSV válido recibe 503 y uno inválido conserva su
+error de validación. Con URL configurada pero PostgreSQL no disponible, el servicio
+devuelve el error técnico correspondiente.
 
 ## Procesador CSV
 
@@ -169,9 +193,9 @@ npm run db:local -- -Action Stop
 
 Consulta [el diseño y la preparación desde cero](docs/PERSISTENCIA.md) para las
 variables, tablas, migraciones y uso de `ImportRepository`.
-El driver `pg` y `@types/pg` son las únicas dependencias añadidas.
-La capa SQL se utiliza mediante el nuevo servicio de aplicación para coordinar
-reintentos y conflictos. Todavía no hay respuestas HTTP de importación.
+La sesión 05 añadió `pg` y `@types/pg`. La capa SQL se utiliza mediante
+`ImportService` para coordinar reintentos y conflictos; la ruta HTTP de la
+sesión 07 traduce sus resultados sin duplicar esas reglas.
 
 ## Servicio de importación
 
@@ -217,6 +241,7 @@ Consulta [PERSISTENCIA](docs/PERSISTENCIA.md) para las garantías y limitaciones
 npm run typecheck
 npm test
 npm run build
+npm run test:integration
 ```
 
 `typecheck` comprueba los tipos de código y pruebas. `build` genera solo la
@@ -226,8 +251,8 @@ Las pruebas CSV cubren sintaxis, normalización, gramáticas y rangos, duplicado
 localización y prioridad de errores, rechazo completo y límites.
 Los casos grandes se construyen en memoria.
 
-`npm test` ejecuta 224 pruebas sin PostgreSQL: las 190 anteriores y 34 del servicio
-y sus errores técnicos. Las 63 pruebas reales de persistencia y coordinación
+`npm test` ejecuta 274 pruebas sin PostgreSQL: las 224 anteriores y 50 nuevas
+HTTP/streams. Las 74 pruebas reales de persistencia, coordinación e integración HTTP
 se ejecutan por separado con `npm run test:integration`;
 requieren la base exclusiva `importacion_validacion_datos_test` y no se omiten
 silenciosamente si falta configuración.
@@ -247,6 +272,9 @@ Los resultados de la última ejecución están en [STATUS](docs/STATUS.md).
 src/
   app.ts                 # Aplicación Express y rutas
   server.ts              # Arranque del servidor local
+  http/
+    receive-csv.ts        # Multipart, cabeceras, límites y cierre de streams
+    import-route.ts       # Traducción de resultados a HTTP
   csv/
     process-products-csv.ts # Entrada pública: bytes y resultado tipado
     parse-csv.ts          # Sintaxis, cabecera, filas y columnas
@@ -269,6 +297,10 @@ tests/
   csv-products.test.ts   # Validación y normalización
   csv-limits.test.ts     # Límites, prioridad y rechazo completo
   import-service.test.ts # Decisiones del servicio y errores técnicos
+  import-http.test.ts    # Contrato HTTP y límites
+  import-streams.test.ts # Interrupción, timeout y cierre de recepción
+  helpers/multipart.ts  # Solicitudes construidas en memoria
+  integration/import-http.test.ts # HTTP y PostgreSQL, carreras y rollback
   integration/persistence.test.ts # Pruebas reales en base aislada
   integration/import-service.test.ts # Carreras con conexiones independientes
 docs/
@@ -276,6 +308,7 @@ docs/
   STATUS.md               # Estado real y siguiente paso
   CONTRATO_CSV.md         # Contrato V1 aprobado; implementación parcial
   PERSISTENCIA.md         # Modelo, configuración y pruebas PostgreSQL
+  HTTP_IMPORTACIONES.md   # Uso de la ruta, respuestas y recepción multipart
 AGENTS.md                 # Instrucciones operativas para Codex
 .env.example              # Configuración local de ejemplo
 package.json
@@ -295,8 +328,8 @@ en castellano y una Description fiel al trabajo realizado; tiene prohibido
 ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
 no modifique expresamente esta norma.
 
-La sesión 05 está publicada en `59dbc42`. La sesión 06 queda local,
+La sesión 06 está publicada en `f4b63e3`. La sesión 07 queda local,
 pendiente de revisión, commit y push manuales.
 
-Próximo paso recomendado: recepción multipart y adaptación de resultados del
-servicio a `POST /importaciones`, con límites y respuestas HTTP del contrato.
+Próximo paso recomendado: definir e implementar las consultas HTTP de productos
+e importaciones, con paginación y pruebas, dentro del alcance V1.

@@ -8,8 +8,9 @@ sobre los bytes originales. No interpreta CSV, recibe multipart ni decide
 respuestas HTTP. No registra intentos fallidos.
 
 Las sesiones 04 y 05 están publicadas en b1cb2e2 y 59dbc42.
-La sesión 06 añade el servicio de coordinación descrito a continuación.
-La exposición HTTP 200/201/409 continúa pendiente.
+La sesión 06, publicada en f4b63e3, añade el servicio de coordinación descrito
+a continuación. La sesión 07 lo expone mediante POST /importaciones; consulta
+[HTTP_IMPORTACIONES](HTTP_IMPORTACIONES.md). La capa SQL conserva su independencia.
 
 ## Entorno local Windows
 
@@ -225,8 +226,9 @@ consulta previa que pueda quedar desactualizada.
 | conflict | SKU_ALREADY_EXISTS, detalles por fila/campo y truncamiento a 100 |
 | persistence_error | PERSISTENCE_ERROR o SERVICE_UNAVAILABLE, mensaje seguro y certeza de commit |
 
-No son respuestas HTTP. El adaptador futuro traducirá created/existing/conflict
-a 201/200/409 según el contrato, y conservará el resto de clasificaciones.
+Son resultados de dominio. El adaptador HTTP de la sesión 07 traduce
+created/existing/conflict a 201/200/409 según el contrato y conserva el resto
+de clasificaciones. No publica la propiedad interna commit.
 Un error técnico no incluye credenciales, mensajes PostgreSQL, SQL ni datos
 de sus excepciones. No se persisten intentos fallidos.
 
@@ -266,9 +268,9 @@ npm run build
 npm run test:integration
 ~~~
 
-npm test ejecuta 224 casos: 190 CSV/health y 34 del servicio y errores técnicos,
-sin requerir base de datos. La integración ejecuta 63 casos reales: 45 de
-persistencia y 18 de coordinación, con migración desde cero,
+npm test ejecuta 274 casos: 190 CSV/health, 34 del servicio y errores técnicos,
+y 50 HTTP/streams, sin requerir base de datos. La integración ejecuta 74 casos
+reales: 45 de persistencia, 18 de coordinación y 11 de HTTP, con migración desde cero,
 reaplicación, rechazo de esquemas ajenos e historial alterado, inserción desde
 CSV, exactitud de céntimos, Unicode, consultas, claves, rangos, unicidad,
 rollback sin residuos y cierre/reutilización de conexiones.

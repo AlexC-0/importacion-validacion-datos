@@ -16,8 +16,10 @@ Fecha de actualización: 11 de noviembre de 2026.
   (`b1cb2e2a586ca29aebd8f25bc60e1aa3c14c5e08`).
 - Sesión 05 publicada por Alex: `59dbc42`
   (`59dbc4230b9c6826fdb7ebcbe8feb6afbf45d6e1`).
-- Al iniciar la sesión 06, `main` local y GitHub coincidían en `59dbc42`;
-  no había cambios pendientes. Esta entrega queda local para revisión,
+- Sesión 06 publicada por Alex: `f4b63e3`
+  (`f4b63e31e29e895cb012512a21288a3567637115`).
+- Al iniciar la sesión 07, `main` local y GitHub coincidían en `f4b63e3`;
+  no había cambios pendientes. La sesión 07 queda local para revisión,
   commit y push manuales.
 - Versión del proyecto en `package.json`: `0.1.0`.
 - La API no está desplegada. Publicar código en GitHub no inicia un servicio.
@@ -282,7 +284,7 @@ quedan excluidos de Git. No se modifican otros repositorios ni servicios.
 La revisión final del diff, documentación y exclusiones se registra en el
 informe de entrega. No hay bloqueos de entorno pendientes.
 
-## Sesión 06 — Coordinación de importaciones, conflictos y reintentos
+## Sesión 06 — Coordinación de importaciones, conflictos y reintentos, publicada
 
 ### Estado inicial
 
@@ -321,7 +323,7 @@ No se han añadido dependencias, tablas ni migraciones, ni modificado las
 decisiones D01–D10. La API mantiene únicamente `GET /health`.
 Las decisiones y límites se detallan en [PERSISTENCIA](PERSISTENCIA.md).
 
-### Comprobaciones ejecutadas en la sesión 06
+### Comprobaciones históricas ejecutadas en la sesión 06
 
 | Comprobación | Resultado |
 | --- | --- |
@@ -361,22 +363,116 @@ Las nuevas pruebas verifican:
 - Código CSV, aplicación/arranque HTTP, pruebas anteriores, migración publicada,
   configuración y dependencias conservados.
 - Rama `main`, HEAD `59dbc42`; cambios locales sin staging, commit ni push.
-- La sesión 06 queda pendiente de revisión y publicación manual por Alex.
+- La entrega de sesión 06 quedó pendiente de revisión y publicación manual.
+  Alex la publicó posteriormente en `f4b63e3`, verificado al iniciar la sesión 07.
+
+## Sesión 07 — Integración HTTP de importaciones
+
+### Estado inicial y alcance
+
+Ruta independiente comprobada, rama main limpia y remoto correcto. HEAD y
+GitHub coincidían en f4b63e3. La instancia PostgreSQL 18.6 seguía activa en
+127.0.0.1:55432 (PID 20536); no hubo reinstalación ni reinicialización.
+
+Se revisaron instrucciones, contrato D01–D10, capas CSV/servicio/PostgreSQL,
+configuración y pruebas. No había cambios previos que preservar.
+
+### Implementación
+
+- POST /importaciones recibe multipart válido con exactamente un archivo en
+  el campo archivo, sin campos extra ni almacenamiento temporal.
+- multiparty 4.3.1 en modo streaming y content-type 1.0.5 para cabeceras MIME
+  estrictas; tipos correspondientes y lock actualizado. Sin otro parser CSV.
+- Recuento real e independiente de cuerpo completo (5308416 bytes) y archivo
+  (5242880 bytes), incluyendo solicitudes chunked sin Content-Length.
+- Recepción interrumpida ante exceso, multipart incompleto/malformado, error,
+  desconexión o timeout. Ningún buffer truncado se entrega al servicio.
+- Tipos declarados aprobados y charset UTF-8; nombre/extensión informativos.
+- Adaptador de resultados existentes a 201/200/400/413/415/422/409/500/503,
+  con detalles contractuales y sin exponer errores internos ni certeza no probada.
+- createApp permite inyectar el servicio; servidor y aplicación separados.
+  Un pool por proceso, cierre único y manejadores SIGINT/SIGTERM.
+- GET /health mantiene su respuesta. Sin DATABASE_URL, la validación sigue
+  funcionando y un archivo válido recibe 503.
+- Límites operativos: 30 s para completar recepción y 35 s de gracia de cierre.
+  No alteran D01–D10 ni sustituyen las futuras pruebas de carga.
+- CSV, servicio, persistencia y migraciones publicadas se reutilizan sin cambios.
+
+Detalles de uso y decisiones en [HTTP_IMPORTACIONES](HTTP_IMPORTACIONES.md).
+
+### Comprobaciones ejecutadas en la sesión 07
+
+| Comprobación | Resultado real |
+| --- | --- |
+| Instalación de dependencias y npm ci desde el lock | Correctos; npm informó 0 vulnerabilidades |
+| npm run typecheck | Correcto |
+| npm test | 274 pruebas correctas en 7 archivos |
+| npm run build | Correcto |
+| npm run test:integration | 74 pruebas reales correctas en 3 archivos |
+
+Total: 348 pruebas sin omisiones. Se conservan las 287 de sesiones anteriores
+y se añaden 50 HTTP/streams y 11 HTTP con PostgreSQL real.
+
+Las nuevas pruebas verifican tipos, charset, campos, múltiples partes, ausencia
+de archivo, multipart malformado/incompleto, UTF-8, prioridad de validación,
+filas/campos/duplicados y truncamiento. Incluyen los límites exactos y un byte
+adicional, 10000/10001 filas, cuerpo chunked, interrupción de una subida aún
+abierta, desconexión y timeout.
+
+Las pruebas PostgreSQL usan solo esquemas propios de la base exclusiva:
+creación y recuperación confirmadas, conflictos sin inserción parcial,
+rollback después de una inserción y reintento, y carreras HTTP sincronizadas
+con conexiones de PID diferentes (201/200 y 201/409). La pérdida de respuesta
+tras COMMIT real se inyecta en el driver: 200 cuando se recupera evidencia,
+503 sin evidencia, seguido de recuperación con 200.
+
+Incidencias corregidas durante el desarrollo: charset vacío o malformado que
+un parser MIME permisivo aceptaba; comprobación asíncrona de desconexión que
+rechazaba por el evento error esperado; tipos del cuerpo de una prueba fetch.
+La recepción atiende aborted/error y libera recursos. Las comprobaciones finales
+anteriores se ejecutaron después de corregir esas incidencias.
+
+### Demostración con la API compilada
+
+Se arrancó dist/server.js en un proceso real, puerto local temporal y esquema
+propio de importacion_validacion_datos_test, con la migración aprobada.
+Se envió multipart con un producto DEMO-07, Café, precio 0.29 y stock 2.
+
+- GET /health: 200 y JSON esperado.
+- POST de archivo nuevo: 201, estado completada, cantidad 1.
+- Reenvío con otro nombre: 200 y exactamente el mismo resultado.
+- Archivo diferente con el mismo SKU: 409.
+- Precio inválido: 422.
+- Base comprobada: una importación y un producto.
+- Manejador de cierre ejecutado, proceso terminado con código 0 y cero
+  conexiones restantes de ese servidor. El esquema propio se eliminó.
+
+No se insertaron datos de demostración en desarrollo ni se eliminaron datos ajenos.
+
+### Entrega y Git
+
+Revisión final correcta: git diff --check, 20 enlaces locales, 6 ejemplos JSON,
+4 bloques CSV y sintaxis de 3 ejemplos TypeScript. Reglas D01–D10, ejemplos
+contractuales y norma permanente de Git conservados. Sin credenciales locales
+detectadas en archivos versionables; exclusiones de Git comprobadas.
+PostgreSQL 18.6 conserva cero esquemas temporales y desarrollo sigue con cero
+importaciones y cero productos. No quedan bloqueos de entorno.
+Rama main y HEAD f4b63e3 conservados. Sin staging, commit, push, ramas nuevas
+ni cambios en otros repositorios. Binarios, dependencias, dist y credenciales
+continúan excluidos. No se despliega la API.
+
+La sesión 07 queda pendiente de revisión, commit y push manuales de Alex
+desde GitHub Desktop.
 
 ## Limitaciones y siguiente sesión
 
-No hay todavía recepción multipart ni rutas HTTP de importación o consulta.
-Los resultados del servicio permiten implementar posteriormente el mapa aprobado.
+No hay rutas de consulta HTTP de productos e importaciones, frontend,
+autenticación, colas, upsert ni despliegue. Los límites y plazos son operativos;
+no constituyen pruebas de carga ni una promesa de latencia o memoria global.
 
-La prueba de pérdida de respuesta inyecta el fallo después de un COMMIT real;
-no reproduce una partición física de red ni una caída del sistema operativo.
-Si no se puede consultar una huella después de un COMMIT incierto, el servicio
-no puede demostrar el resultado y exige un reintento posterior de los mismos bytes.
+La prueba de pérdida de respuesta inyecta el fallo después de un COMMIT real,
+sin reproducir una partición física de red. Un COMMIT incierto sin recuperación
+demostrable requiere reintentar los mismos bytes. No se afirma éxito sin evidencia.
 
-Los límites de espera son operativos; no constituyen pruebas de carga ni una
-promesa de latencia total. No hay bucles de reintento ilimitados.
-No quedan bloqueos para revisar esta entrega.
-
-Sesión 07 recomendada: integrar `POST /importaciones`, recepción multipart,
-límites de solicitud y traducción de resultados a HTTP, con pruebas del contrato.
-No ampliar el alcance a autenticación, frontend o despliegue.
+Sesión 08 recomendada: definir e implementar las consultas HTTP de productos
+e importaciones con paginación y pruebas, manteniendo el alcance V1.

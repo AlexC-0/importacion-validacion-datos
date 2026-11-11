@@ -19,11 +19,15 @@
     "db:local": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local-postgres.ps1"
   },
   "dependencies": {
+    "content-type": "~1.0.5",
     "express": "^5.3.0",
+    "multiparty": "^4.3.1",
     "pg": "^8.23.1"
   },
   "devDependencies": {
+    "@types/content-type": "^1.1.9",
     "@types/express": "^5.0.6",
+    "@types/multiparty": "^4.2.1",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
