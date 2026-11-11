@@ -1,0 +1,65 @@
+name: Validación V1
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: csv_ci
+          POSTGRES_PASSWORD: ci_only_disposable
+          POSTGRES_DB: importacion_validacion_datos_test
+          POSTGRES_INITDB_ARGS: --encoding=UTF8
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U csv_ci -d importacion_validacion_datos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Preparar Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Instalar desde el lock
+        run: npm ci
+
+      - name: Comprobar tipos
+        run: npm run typecheck
+
+      - name: Pruebas sin PostgreSQL
+        run: npm test
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Comprobar migración inicial y reaplicación
+        env:
+          DATABASE_URL: postgresql://csv_ci:ci_only_disposable@127.0.0.1:5432/importacion_validacion_datos_test
+        run: |
+          npm run db:migrate
+          npm run db:migrate
+
+      - name: Integración y aceptación con PostgreSQL real
+        env:
+          TEST_DATABASE_URL: postgresql://csv_ci:ci_only_disposable@127.0.0.1:5432/importacion_validacion_datos_test
+        run: npm run test:integration

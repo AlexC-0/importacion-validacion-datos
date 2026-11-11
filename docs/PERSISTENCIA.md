@@ -39,6 +39,7 @@ Desde una copia nueva, antes de crear manualmente un .env:
 npm ci
 npm run db:local -- -Action Initialize
 npm run db:migrate
+npm run build
 npm run test:integration
 ~~~
 
@@ -295,10 +296,11 @@ npm run build
 npm run test:integration
 ~~~
 
-npm test ejecuta 363 casos: los 274 de sesiones anteriores y 89 de parámetros
-/HTTP de lectura, sin requerir base de datos. La integración ejecuta 88 casos
-reales: 45 de persistencia, 18 de coordinación, 11 de importación HTTP y 14 de
-consultas HTTP, con migración desde cero,
+npm test ejecuta 364 casos sin requerir base de datos. La integración ejecuta
+89 casos reales: 45 de persistencia, 18 de coordinación, 11 de importación HTTP,
+14 de consultas HTTP y 1 de aceptación del servidor compilado. Es obligatorio
+compilar antes de integrar: ese último caso ejecuta dist/server.js como proceso
+real y comprueba su cierre. Se cubren migración desde cero,
 reaplicación, rechazo de esquemas ajenos e historial alterado, inserción desde
 CSV, exactitud de céntimos, Unicode, consultas, claves, rangos, unicidad,
 rollback sin residuos y cierre/reutilización de conexiones.
@@ -315,6 +317,12 @@ Prueba cuatro archivos idénticos simultáneos, archivos distintos con SKU
 compartidos y orden inverso, espera observable de una transacción pendiente,
 commit/rollback del competidor, timeout, fallo de inserción y recuperación de
 respuesta perdida. No son pruebas de carga ni cobertura de todo fallo de red.
+
+La [guía V1](VALIDACION_V1.md) reúne la matriz de aceptación, configuración
+en Linux/Windows, reproducción desde copia limpia y el estado pendiente de CI.
+La prueba de aceptación usa un esquema propio y comprueba cero conexiones del
+servidor al terminar. En Windows invoca por IPC el manejador SIGTERM; en Linux
+señaliza el proceso con SIGTERM real, pendiente de ejecución remota.
 
 Referencias técnicas: [transacciones con pg](https://node-postgres.com/features/transactions),
 [consultas parametrizadas](https://node-postgres.com/features/queries) y

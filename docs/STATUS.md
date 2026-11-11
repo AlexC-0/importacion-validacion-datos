@@ -20,9 +20,11 @@ Fecha de actualización: 11 de noviembre de 2026.
   (`f4b63e31e29e895cb012512a21288a3567637115`).
 - Sesión 07 publicada por Alex: `96a9ae0`
   (`96a9ae06b560d1c08dfafd39ca558ad53b99409d`).
-- Al iniciar la sesión 08, `main` local y GitHub coincidían en `96a9ae0`;
-  no había cambios pendientes. La sesión 08 queda local para revisión,
-  commit y push manuales.
+- Sesión 08 publicada por Alex: `cb4e48c`
+  (`cb4e48c5f4956c5d2584c461c2ce4aece2cb8082`).
+- Al iniciar la sesión 09, main, origin/main y GitHub coincidían en cb4e48c;
+  no había cambios pendientes. La sesión 09 queda local, sin staging,
+  para revisión, commit y push manuales. CI remota aún no ejecutada.
 - Versión del proyecto en `package.json`: `0.1.0`.
 - La API no está desplegada. Publicar código en GitHub no inicia un servicio.
 
@@ -562,8 +564,86 @@ locales detectadas en archivos versionables; exclusiones verificadas.
 PostgreSQL 18.6 sigue en 127.0.0.1:55432; cero esquemas temporales y desarrollo
 con cero importaciones y cero productos. No quedan bloqueos.
 Se conserva main y HEAD 96a9ae0, sin staging, commit, push ni ramas nuevas.
-La sesión 08 queda pendiente de revisión y publicación manual de Alex desde
-GitHub Desktop. No se despliega la aplicación.
+La sesión 08 se entregó pendiente de revisión y publicación manual de Alex.
+Después la publicó en cb4e48c, verificado al iniciar la sesión 09.
+No se despliega la aplicación.
+
+## Sesión 09 — Validación integral y preparación de V1
+
+### Revisión y corrección acotada
+
+Inspección de contratos, código, pruebas, scripts, migración y PostgreSQL,
+partiendo de main limpio en cb4e48c. Revisión de validación, SQL parametrizado,
+transacciones, errores y gestión de recursos, reutilizando la cobertura existente.
+D01–D10, migración 001, dependencias y rutas conservan su alcance.
+
+Se demostró un defecto: el error PostgreSQL 53300 (conexiones agotadas) devolvía
+500 en POST /importaciones. La nueva regresión falló primero (esperado 503,
+recibido 500); después se añadió ese código a indisponibilidad temporal y pasó
+como 503 SERVICE_UNAVAILABLE. No se modificó la coordinación transaccional.
+
+Se añadió una aceptación del proceso dist/server.js: arranque real, health,
+201/200/409/422, listados/detalle/filtros/paginación y errores 400/404.
+Compara filas y xmin, comprueba salida 0 y cero conexiones de ese servidor.
+En Windows IPC invoca el manejador SIGTERM; Linux usará SIGTERM real en CI.
+Las demás combinaciones se conservan en sus suites, sin duplicación masiva.
+
+### Comprobaciones ejecutadas en la sesión 09
+
+| Comprobación | Resultado real |
+| --- | --- |
+| npm run typecheck | Correcto |
+| npm test | 364 pruebas correctas en 9 archivos |
+| npm run build | Correcto |
+| npm run test:integration | 89 pruebas reales correctas en 5 archivos |
+
+Total: 453 casos sin omisiones, dos más que en la sesión 08. La
+[matriz A–G](VALIDACION_V1.md#matriz-de-aceptación) vincula los criterios con
+sus evidencias. La prueba de GET /health sigue pasando.
+
+### Reproducibilidad y limpieza
+
+Copia temporal de archivos versionables, incluidos los cambios de código de
+esta sesión, sin .git, .env, .local, node_modules ni dist. npm ci instaló 167
+paquetes; su auditoría no notificó vulnerabilidades. Se repitieron typecheck,
+las 364 pruebas sin base, build y las 89 de integración, todas correctas.
+Son los mismos 453 casos en otro entorno local, no 906 casos distintos.
+
+Una base temporal nueva UTF-8, en la instancia existente, permitió comprobar
+migración inicial y reaplicación, arranque compilado, importación 201, reenvío
+200, consultas y precio 29 céntimos. Credenciales transmitidas por entorno,
+sin guardarlas en la copia. Cierre con código 0 y sin conexiones restantes.
+La base y carpeta temporales se eliminaron; .env original conserva su hash.
+No se reinicializó PostgreSQL ni se alteraron datos de desarrollo.
+
+### CI y entrega pendiente
+
+.github/workflows/ci.yml prepara ubuntu-24.04, Node.js 24 y PostgreSQL 18,
+con npm ci, typecheck, test, build, migración/reaplicación e integración.
+Se activa por push a main o manualmente. Permisos contents: read, checkout
+sin persistir credenciales y contraseña desechable del servicio de CI.
+Acciones oficiales fijadas por SHA: checkout v7.0.1 y setup-node v7.1.0.
+
+Revisión estática de estructura, comandos, permisos, base y variables, sin
+linter YAML externo ni ejecución del runner. **GitHub Actions aún no se ha
+verificado remotamente. V1 no está cerrada definitivamente.**
+No se cambian package.json, lock ni migraciones; no hay nuevas dependencias.
+
+Revisión final: git diff --check correcto, 42 enlaces locales (incluidas anclas),
+10 ejemplos JSON, 5 bloques CSV con los resultados válidos/inválidos previstos
+y sintaxis de 3 ejemplos TypeScript comprobados. Contratos intactos; sin valores
+de las credenciales locales detectados en los 49 archivos versionables.
+.env, .local, node_modules y dist siguen excluidos de Git.
+
+PostgreSQL 18.6 permanece activo en 127.0.0.1:55432, PID 20536. Desarrollo
+conserva cero importaciones y cero productos; cero esquemas temporales y cero
+conexiones de aceptación. Base/carpeta de reproducción eliminadas y sin
+procesos de API de prueba residuales. No se detuvo la instancia existente.
+
+main conserva cb4e48c. No hay staging, commit, push, ramas nuevas, tags,
+releases ni despliegue. Alex revisará y publicará desde GitHub Desktop.
+La guía [VALIDACION_V1](VALIDACION_V1.md) reúne instalación Windows/Linux,
+configuración, migraciones, pruebas, ejemplos, errores y limitaciones.
 
 ## Limitaciones y siguiente sesión
 
@@ -579,5 +659,7 @@ frontend, autenticación ni despliegue.
 La cobertura de COMMIT incierto sigue usando fallos inyectados en el driver;
 no es una prueba de corte físico de red. No quedan bloqueos de implementación.
 
-Sesión 09 recomendada: cierre técnico de V1 con pruebas de aceptación,
-revisión de instalación reproducible y preparación de integración continua.
+Siguiente paso: revisión y publicación manual de la sesión 09; después,
+verificar en GitHub Actions la ejecución del commit exacto en main y registrar
+su URL/resultado. Solo con esa evidencia podrá declararse cerrada V1.
+Las pruebas de carga y fallos físicos de red siguen fuera de esta entrega.

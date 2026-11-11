@@ -113,7 +113,7 @@ Alex publicó la sesión 06 en `f4b63e3`, verificado al iniciar la sesión 07.
 
 Alex publicó la sesión 07 en `96a9ae0`, verificado al iniciar la sesión 08.
 
-## Sesión 08 — Consultas HTTP de solo lectura
+## Sesión 08 — Consultas HTTP de solo lectura, publicada
 
 - GET /productos con orden por SKU, paginación y filtro por importación.
 - GET /importaciones con fecha descendente e ID como desempate.
@@ -123,8 +123,23 @@ Alex publicó la sesión 07 en `96a9ae0`, verificado al iniciar la sesión 08.
 - Pruebas HTTP, PostgreSQL en modo read-only y verificación de filas sin cambios.
 - Sin nuevas tablas, dependencias ni cambios en D01–D10 o en la importación.
 
-Contrato: [HTTP_CONSULTAS](HTTP_CONSULTAS.md). Esta entrega queda local para
-revisión, commit y push manuales por Alex.
+Contrato: [HTTP_CONSULTAS](HTTP_CONSULTAS.md). Alex publicó esta entrega en
+`cb4e48c`, verificado al iniciar la sesión 09.
+
+## Sesión 09 — Validación integral y candidata V1
+
+- Matriz de aceptación ligada a las suites existentes, sin duplicarlas.
+- Prueba del servidor compilado: importación, recuperación, conflicto,
+  consultas, health y cierre sin conexiones propias residuales.
+- Corrección demostrada: PostgreSQL 53300 devuelve 503 en importación.
+- 453 pruebas correctas, tipos y build, también desde una copia limpia.
+- Migración y reaplicación en una base temporal nueva; HTTP real y limpieza.
+- Workflow Linux con Node.js 24/PostgreSQL 18, credenciales desechables y
+  permisos de lectura, pendiente de publicación y ejecución remota.
+- Sin nuevas funcionalidades, dependencias, tablas ni cambios de D01–D10.
+
+Evidencia y pasos: [VALIDACION_V1](VALIDACION_V1.md). Los cambios quedan locales
+para revisión, commit y push manuales. V1 no se declara cerrada hasta revisar CI.
 
 ## Exclusiones
 
@@ -136,7 +151,7 @@ revisión, commit y push manuales por Alex.
 - Sustituir PostgreSQL por MySQL o usar PHP/Apache como servidor de esta API.
 - Implementar importación, persistencia o consultas funcionales durante las sesiones 01, 02 y 03.
 
-## Contrato aprobado y aspectos de implementación pendientes
+## Contrato aprobado y validación pendiente
 
 El formato aprobado es `sku,nombre,precio_eur,stock`.
 [CONTRATO_CSV.md](CONTRATO_CSV.md) recoge D01–D10: tipos y límites,
@@ -148,7 +163,8 @@ La sesión 05 añade persistencia con UUID, precios enteros, relaciones y consul
 internas. La sesión 06 coordina reintentos y conflictos bajo concurrencia.
 La sesión 07 añade recepción multipart y respuestas HTTP de importación.
 La sesión 08 incorpora el contrato y las rutas de consulta HTTP.
-Los límites aprobados de V1 se
+La sesión 09 comprueba el conjunto y prepara CI; falta verificar su ejecución
+remota antes del cierre definitivo. Los límites aprobados de V1 se
 evaluarán con futuras pruebas de carga; no se modifican en esta sesión.
 
 ## Criterios de finalización de la primera versión
@@ -164,6 +180,8 @@ evaluarán con futuras pruebas de carga; no se modifican en esta sesión.
 - Hay pruebas de casos válidos, inválidos, duplicados, repetición y rollback.
 - Una instalación limpia permite compilar y ejecutar las pruebas con instrucciones
   reproducibles, sin secretos en el repositorio.
+- La CI de la candidata debe ejecutarse en GitHub y revisarse sobre el commit
+  publicado manualmente antes de declarar cerrada V1.
 
 ## Criterios de cierre de la sesión 01
 
@@ -232,5 +250,11 @@ metadatos correctos y errores de entrada/inexistencia/persistencia controlados.
 Las consultas no modifican registros y solo observan datos confirmados.
 Tipos, pruebas, build y demostración HTTP real correctos, sin cambios de esquema.
 
-Próximo paso recomendado: cierre técnico de V1, pruebas de aceptación,
-reproducibilidad de la instalación y preparación de integración continua.
+La sesión 08 está publicada en `cb4e48c`.
+
+## Criterios de cierre de la sesión 09
+
+Candidata comprobada localmente, instalación reproducida, datos de prueba
+limpios, documentación coherente y CI preparada. No confundir esos resultados
+con una ejecución remota: Alex debe publicar y revisar Actions antes de cerrar V1.
+No se crean tags, releases ni despliegues en esta sesión.

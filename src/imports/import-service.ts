@@ -48,7 +48,7 @@ function success(kind: 'created' | 'existing', record: StoredImport): ImportResu
 function technical(error: unknown, uncertain = false): ImportResult {
   const code = error instanceof PersistenceError ? error.code : '';
   const unavailable = uncertain || code.startsWith('08') ||
-    ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', '57P01', '57P02', '57P03', '55P03', '57014', '40P01', '40001'].includes(code);
+    ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', '57P01', '57P02', '57P03', '55P03', '57014', '40P01', '40001', '53300'].includes(code);
   return {
     kind: 'persistence_error',
     commit: uncertain ? 'unknown' : 'not_confirmed',

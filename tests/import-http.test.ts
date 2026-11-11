@@ -164,6 +164,7 @@ describe('POST /importaciones: contrato HTTP y recepción', () => {
   it.each([
     ['23514', 500, 'PERSISTENCE_ERROR', false],
     ['ECONNREFUSED', 503, 'SERVICE_UNAVAILABLE', false],
+    ['53300', 503, 'SERVICE_UNAVAILABLE', false],
     ['ECONNRESET', 503, 'SERVICE_UNAVAILABLE', true],
   ])('fallo %s devuelve HTTP %s y %s, incierto=%s', async (code, status, expected, uncertain) => {
     const { app, store } = setup();

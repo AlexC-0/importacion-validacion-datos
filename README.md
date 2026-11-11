@@ -33,9 +33,14 @@ creación transaccional, conflictos, reintentos y solicitudes concurrentes.
 
 La sesión 07 está publicada en `96a9ae0` y añade `POST /importaciones`: recepción multipart, límites de bytes,
 validación, persistencia e idempotencia con las respuestas aprobadas.
-La sesión 08 añade `GET /productos`, `GET /importaciones` y su detalle por UUID,
+La sesión 08 está publicada en `cb4e48c` y añade `GET /productos`,
+`GET /importaciones` y su detalle por UUID,
 con paginación y consultas de solo lectura. `GET /health` conserva su comportamiento.
-No hay despliegue.
+La sesión 09 prepara la candidata V1: aceptación del servidor compilado,
+corrección de indisponibilidad PostgreSQL y CI. Las 453 pruebas pasan localmente;
+la ejecución remota de Actions sigue pendiente de publicación manual.
+Consulta la [guía de validación V1](docs/VALIDACION_V1.md).
+No hay despliegue ni cierre definitivo de V1.
 
 ## Tecnologías y requisitos
 
@@ -208,6 +213,7 @@ npm run db:local -- -Action Status
 # Si está detenido:
 npm run db:local -- -Action Start
 npm run db:migrate
+npm run build
 npm run test:integration
 # Para detenerlo al terminar de trabajar:
 npm run db:local -- -Action Stop
@@ -273,11 +279,16 @@ Las pruebas CSV cubren sintaxis, normalización, gramáticas y rangos, duplicado
 localización y prioridad de errores, rechazo completo y límites.
 Los casos grandes se construyen en memoria.
 
-`npm test` ejecuta 363 pruebas sin PostgreSQL: las 274 anteriores y 89 de
-parámetros/HTTP de lectura. Las 88 pruebas reales de persistencia, coordinación e integración HTTP
-se ejecutan por separado con `npm run test:integration`;
-requieren la base exclusiva `importacion_validacion_datos_test` y no se omiten
-silenciosamente si falta configuración.
+`npm test` ejecuta 364 pruebas sin PostgreSQL. Las 89 pruebas reales de
+persistencia, coordinación, HTTP y aceptación del servidor compilado se ejecutan
+con `npm run test:integration`, después de `npm run build`. Requieren la base
+exclusiva `importacion_validacion_datos_test` y no se omiten silenciosamente
+si falta configuración. Total: 453 casos.
+
+La [matriz de aceptación y reproducción](docs/VALIDACION_V1.md) relaciona los
+criterios con sus suites. El [workflow de CI](.github/workflows/ci.yml) prepara
+estas comprobaciones en Linux con Node.js 24 y PostgreSQL 18. Su resultado
+remoto solo podrá verificarse tras el commit y push manuales.
 
 Para ejecutar solo el procesador:
 
@@ -325,6 +336,7 @@ tests/
   import-streams.test.ts # Interrupción, timeout y cierre de recepción
   read-parameters.test.ts # Gramáticas y rangos de consulta
   read-http.test.ts      # Respuestas, proyección y errores de lectura
+  integration/acceptance.test.ts # Servidor compilado, flujo completo y cierre
   integration/read-http.test.ts # Paginación, confirmación y ausencia de escrituras
   helpers/multipart.ts  # Solicitudes construidas en memoria
   integration/import-http.test.ts # HTTP y PostgreSQL, carreras y rollback
@@ -333,10 +345,12 @@ tests/
 docs/
   PROJECT_BRIEF.md        # Alcance y criterios de finalización
   STATUS.md               # Estado real y siguiente paso
-  CONTRATO_CSV.md         # Contrato V1 aprobado; implementación parcial
+  CONTRATO_CSV.md         # Contrato V1 aprobado
   PERSISTENCIA.md         # Modelo, configuración y pruebas PostgreSQL
   HTTP_IMPORTACIONES.md   # Uso de la ruta, respuestas y recepción multipart
   HTTP_CONSULTAS.md       # Contrato de las consultas, paginación y ejemplos
+  VALIDACION_V1.md        # Matriz, reproducción y verificación pendiente de CI
+.github/workflows/ci.yml  # CI Linux, Node.js 24 y PostgreSQL 18
 AGENTS.md                 # Instrucciones operativas para Codex
 .env.example              # Configuración local de ejemplo
 package.json
@@ -356,9 +370,9 @@ en castellano y una Description fiel al trabajo realizado; tiene prohibido
 ejecutar `git commit`, `git push` o acciones equivalentes mientras el usuario
 no modifique expresamente esta norma.
 
-La sesión 07 está publicada en `96a9ae0`. La sesión 08 queda local,
+La sesión 08 está publicada en `cb4e48c`. La sesión 09 queda local,
 pendiente de revisión, commit y push manuales.
 
-Próximo paso recomendado: cierre técnico de V1 con pruebas de aceptación,
-revisión de instalación reproducible y preparación de integración continua.
+Próximo paso: publicar manualmente y revisar la ejecución de GitHub Actions
+para ese commit. Solo después podrá registrarse el cierre de V1.
 Las pruebas de carga y de fallos físicos de red siguen pendientes.

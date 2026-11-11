@@ -7,10 +7,12 @@
 - Inspecciona primero la ruta, `git status --short --branch`, la rama y los remotos.
 - Trabaja exclusivamente dentro de este proyecto independiente. No modifiques
   archivos, historial ni remotos de otros proyectos.
-- La sesión 08 autoriza GET /productos, GET /importaciones y su detalle por UUID,
-  paginación, contrato de lectura y pruebas; reutiliza el pool y esquema existentes.
-- No añadas edición, borrado, frontend, autenticación ni despliegue.
-  Conserva D01–D10, las garantías de importación y las migraciones publicadas.
+- La sesión 09 autoriza validación integral, pruebas de aceptación faltantes,
+  reproducción en copia aislada, documentación y preparación de GitHub Actions.
+- No añadas funcionalidades de producto. Corrige solo defectos demostrables de V1;
+  conserva D01–D10, las garantías de importación y las migraciones publicadas.
+- La CI remota queda pendiente hasta el commit/push manual y la revisión de su
+  ejecución real. No declares V1 cerrada definitivamente antes de comprobarla.
 - Usa la instancia PostgreSQL existente, comprobando su estado antes de arrancarla;
   no reinstales PostgreSQL ni reinicialices el cluster.
 - Antes de instalar software o iniciar servicios nuevos, solicita autorización.
