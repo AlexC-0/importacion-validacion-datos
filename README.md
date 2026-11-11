@@ -1,6 +1,6 @@
 # Importación y validación de datos
 
-Proyecto 01 de **CHAMBA DIARIA**: una API REST para importar productos desde
+Una API REST para importar productos desde
 archivos CSV, validar los datos y guardar importaciones válidas en PostgreSQL.
 
 ## Estado actual
